@@ -3,18 +3,19 @@
 //
 //   npx -y -p playwright@1 node tools/og.cjs   (ou : node tools/og.cjs si playwright est déjà installé)
 //
-// À relancer seulement si le titre, l'icône ou l'onde (public/wave.svg, produite par tools/build.py) changent.
+// À relancer seulement si le titre, l'icône, la capture de l'éditeur ou l'onde (public/wave.svg, produite par tools/build.py) changent.
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 const icon = 'data:image/svg+xml;base64,' + fs.readFileSync(path.join(PUBLIC, 'icon.svg')).toString('base64');
+const editor = 'data:image/webp;base64,' + fs.readFileSync(path.join(PUBLIC, 'img', 'editeur-720.webp')).toString('base64');
 const wave = fs.readFileSync(path.join(PUBLIC, 'wave.svg'), 'utf8').replace('<svg ', '<svg class="wave" ');
 
 const VARIANTS = [
-  { file: 'og.png', lang: 'fr', h1: 'Écris. Enregistre.<br><em>Garde tout chez toi.</em>', sub: 'Le carnet de textes hors-ligne · Android' },
-  { file: 'og-en.png', lang: 'en', h1: 'Write. Record.<br><em>Keep it all on your phone.</em>', sub: 'The offline lyrics notebook · Android' },
+  { file: 'og.png', lang: 'fr', h1: 'Écris en rythme.<br><em>Enregistre ta maquette.</em>', sub: 'Rimes, syllabes, studio · hors-ligne' },
+  { file: 'og-en.png', lang: 'en', h1: 'Write in rhythm.<br><em>Record your demo.</em>', sub: 'Rhymes, syllables, studio · offline' },
 ];
 
 const page = (v) => `<!doctype html><html lang="${v.lang}"><head><meta charset="utf-8"><style>
@@ -24,16 +25,18 @@ body{width:1200px;height:630px;overflow:hidden;position:relative;color:#fff;
   background:radial-gradient(60% 90% at 90% 0%,rgba(120,117,230,.6) 0%,transparent 62%),
              radial-gradient(50% 70% at 0% 100%,rgba(183,181,255,.2) 0%,transparent 60%),#3D3B8E}
 .wave{position:absolute;left:0;right:0;bottom:0;width:100%;height:150px;fill:rgba(183,181,255,.18)}
-.wrap{position:absolute;left:84px;right:84px;top:0;bottom:120px;display:flex;flex-direction:column;justify-content:center}
+.wrap{position:absolute;left:84px;right:440px;top:0;bottom:120px;display:flex;flex-direction:column;justify-content:center}
 .brand{display:flex;align-items:center;gap:22px;margin-bottom:34px}
 .brand img{width:96px;height:96px;border-radius:26px;box-shadow:0 16px 40px rgba(8,7,30,.4)}
 .brand span{font-size:64px;font-weight:850;letter-spacing:-.03em}
-h1{font-size:80px;line-height:1.02;font-weight:850;letter-spacing:-.04em}
+h1{font-size:68px;line-height:1.02;font-weight:850;letter-spacing:-.04em}
 h1 em{font-style:normal;color:#B7B5FF}
-p{margin-top:26px;font-size:32px;color:rgba(255,255,255,.82)}
+.shot{position:absolute;right:90px;top:52px;width:290px;padding:8px;border-radius:40px;background:#0B0A1F;transform:rotate(4deg);box-shadow:0 0 0 1px rgba(255,255,255,.14),0 40px 80px -20px rgba(8,7,30,.75)}
+.shot img{display:block;width:100%;border-radius:32px}
+p{margin-top:26px;font-size:30px;color:rgba(255,255,255,.82)}
 </style></head><body>${wave}
 <div class="wrap"><div class="brand"><img src="${icon}" alt=""><span>Rhynote</span></div>
-<h1>${v.h1}</h1><p>${v.sub}</p></div></body></html>`;
+<h1>${v.h1}</h1><p>${v.sub}</p></div><div class="shot"><img src="${editor}" alt=""></div></body></html>`;
 
 (async () => {
   const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});

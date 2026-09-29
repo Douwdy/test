@@ -6,7 +6,8 @@
 Sources :
 - les textes des pages d'accueil (FR et EN) sont dans le dictionnaire T ci-dessous ;
 - la politique de confidentialité est dans content/confidentialite-fr.html et
-  content/confidentialite-en.html, recopiée telle quelle (aucune retouche typographique).
+  content/confidentialite-en.html, recopiée telle quelle (aucune retouche typographique) ;
+- les captures d'écran sont dans content/captures/ ; tools/images.py en tire les WebP de public/img/.
 
 Fichiers produits : public/index.html, public/en/index.html, public/confidentialite.html,
 public/en/privacy.html, public/404.html, public/wave.svg. Ne pas les modifier à la main.
@@ -34,43 +35,38 @@ def fr_typo(html):
     return html
 
 
-def wave_rects(n, w, h, seed, gap=0.4, cls=""):
+def wave_rects(n, w, h, seed, gap=0.4):
     """Barres d'onde sonore (hauteurs pseudo-aléatoires, déterministes)."""
     rnd = random.Random(seed)
     bw = w / n
-    attr = f' class="{cls}"' if cls else ""
     out = []
     for i in range(n):
         env = 0.35 + 0.65 * abs(math.sin(i / n * math.pi * 2.3 + seed))
         v = max(0.12, min(1, env * (0.55 + 0.45 * rnd.random())))
         bh = round(v * h, 1)
         rw = round(bw * (1 - gap), 2)
-        out.append(f'<rect{attr} x="{round(i * bw + bw * gap / 2, 2)}" y="{round((h - bh) / 2, 1)}" '
+        out.append(f'<rect x="{round(i * bw + bw * gap / 2, 2)}" y="{round((h - bh) / 2, 1)}" '
                    f'width="{rw}" height="{bh}" rx="{round(rw / 2, 2)}"/>')
     return "".join(out)
 
 
-# Petite onde animée du téléphone d'illustration (inline pour pouvoir l'animer en CSS).
-WAVE_HERO = (f'<svg class="wave wave-hero" viewBox="0 0 220 44" preserveAspectRatio="none" aria-hidden="true">'
-             f'{wave_rects(44, 220, 44, 3, cls="b")}</svg>')
-# Grande onde décorative : fichier séparé, utilisé comme masque CSS (.band-wave, image de partage).
+# Onde décorative : fichier séparé, utilisé comme masque CSS (.band-wave) et dans l'image de partage.
 WAVE_FILE = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 220" preserveAspectRatio="none">'
              f'{wave_rects(120, 1200, 220, 7)}</svg>\n')
 
-ICONS = {
-    "pen": '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
-    "layers": '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/>',
-    "speech": '<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-    "mic": '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/>',
-    "music": '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
-    "save": '<path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
-}
 PLAY_ICON = ('<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3.2v17.6a.8.8 0 0 0 '
              '1.2.7l14.4-8.8a.8.8 0 0 0 0-1.4L6.2 2.5A.8.8 0 0 0 5 3.2z"/></svg>')
 
 
-def icon(name):
-    return f'<span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[name]}</svg></span>'
+def shot(name, alt, sizes="(max-width: 640px) 78vw, 300px", eager=False, cls="device"):
+    """Capture d'écran dans un cadre de téléphone (images produites par tools/images.py)."""
+    landscape = name == "paysage"
+    small, big = (800, 1600) if landscape else (360, 720)
+    w, h = (1600, 720) if landscape else (720, 1600)
+    load = 'fetchpriority="high"' if eager else 'loading="lazy"'
+    return (f'<figure class="{cls}{" landscape" if landscape else ""}"><img src="/img/{name}-{big}.webp" '
+            f'srcset="/img/{name}-{small}.webp {small}w, /img/{name}-{big}.webp {big}w" sizes="{sizes}" '
+            f'width="{w}" height="{h}" alt="{alt}" {load} decoding="async"></figure>')
 
 
 # Chrome commun aux deux langues : accueil, politique, libellés de navigation.
@@ -89,44 +85,72 @@ L = {
 
 T = {
     "fr": dict(
-        title="Rhynote · Le carnet de textes hors-ligne pour rappeurs, chanteurs et auteurs",
-        desc="Rhynote, l'appli Android pour écrire tes textes, enregistrer des mémos vocaux, importer tes instrus "
-             "et monter des maquettes. 100 % hors-ligne, aucune donnée collectée.",
+        title="Rhynote · Écris tes textes en rythme et enregistre tes maquettes",
+        desc="Rhynote, l'appli Android pour écrire tes textes : syllabes comptées, schéma de rimes, dictionnaire de "
+             "rimes, conseils de rythme et un studio multipiste pour tes maquettes. 100 % hors-ligne, aucune donnée "
+             "collectée.",
         skip="Aller au contenu",
-        ids=("fonctions", "maquettes", "confidentialite"),
-        nav=("Fonctions", "Maquettes", "Confidentialité", "FAQ"),
-        eyebrow="Carnet de textes hors-ligne pour Android",
-        h1="Écris. Enregistre. <em>Garde tout chez toi.</em>",
-        lede="Rhynote, c'est le carnet des rappeurs, chanteurs et auteurs : textes, mémos vocaux, instrus et "
-             "maquettes réunis dans une seule appli. Sans compte, sans pub, sans Internet.",
-        cta="Télécharger sur Google Play", cta2="Voir les fonctions",
+        ids=("ecrire", "studio", "confidentialite"),
+        nav=("Écrire", "Studio", "Confidentialité", "FAQ"),
+        eyebrow="Pour rappeurs, chanteurs et auteurs · Android",
+        h1="Écris en rythme. <em>Enregistre ta maquette.</em>",
+        lede="Rhynote compte tes syllabes, colore tes rimes, t'aide à caler ton flow sur le tempo et transforme ton "
+             "texte en maquette, piste par piste. Tout se passe sur ton téléphone : sans compte, sans pub, sans "
+             "Internet.",
+        cta="Télécharger sur Google Play", cta2="Découvrir l'appli",
         chips=("100 % hors-ligne", "Aucune donnée collectée", "Sans pub", "Sans compte"),
-        ph_title="Nuit blanche", ph_chip="Rap", ph_meta="Brouillon · version 3",
-        lyrics=("J'écris à l'encre de la nuit,", "le refrain vient sans bruit,", "trois heures, le café refroidit,",
-                "mais la rime, elle, jamais ne fuit."),
-        lyrics_dim=("[Refrain]", "Encore une ligne avant l'aube…"),
-        ph_label="Maquette", ph_time="01:24",
-        f_kicker="Fonctions", f_title="Tout ce qu'il faut pour écrire.",
-        f_sub="De la première ligne à la maquette, sans quitter ton téléphone.",
-        feats=(
-            ("pen", "Écris et classe",
-             "Paroles, poèmes, couplets : note une idée en quelques secondes et retrouve-la grâce aux catégories."),
-            ("layers", "Garde chaque version",
-             "Réécris sans crainte : Rhynote conserve les versions de tes textes, l'ancienne n'est jamais perdue."),
-            ("speech", "Tes prononciations",
-             "Indique comment tu prononces les mots à ta façon : noms propres, argot, mots inventés."),
-            ("mic", "Mémos vocaux",
-             "Capte une mélodie ou un flow dès qu'il te vient. L'enregistrement reste sur ton téléphone."),
-            ("music", "Tes instrus",
-             "Importe tes instrus en fichier audio, ou rattache à un texte le lien d'une instru publiée sur YouTube."),
-            ("save", "Sauvegarde",
-             "Depuis l'écran « Sauvegarde », crée un fichier de sauvegarde et range-le à l'endroit de ton choix."),
+        hero_shots=(("editeur", "L'éditeur de Rhynote : chaque vers avec son nombre de syllabes et la lettre de sa rime"),
+                    ("dictionnaire", "Le dictionnaire de rimes de Rhynote, pour le mot « minuit »")),
+        w_kicker="Écrire", w_title="Un carnet qui écoute ton rythme.",
+        w_sub="Rhynote n'est pas un simple bloc-notes : il compte, il rime et il te dit quand un vers déborde.",
+        shows=(
+            ("editeur", "L'éditeur : vers numérotés par syllabes, rimes surlignées en couleur, alerte sur une ligne trop longue",
+             "Éditeur", "Chaque syllabe compte.",
+             "Rhynote compte les syllabes de chaque vers pendant que tu écris. Fixe une cible par ligne et un tempo : "
+             "les vers trop longs ou trop courts ressortent tout de suite.",
+             ("Syllabes comptées vers par vers", "Cible par ligne et tempo en BPM",
+              "Schéma de rimes en couleurs : A, B, C…", "Sections [Couplet], [Refrain]")),
+            ("dictionnaire", "Le dictionnaire de rimes : rimes riches, suffisantes et pauvres pour le mot « minuit »",
+             "Dictionnaire de rimes", "Trouve la rime juste.",
+             "Tape un mot : Rhynote trouve ses rimes et les classe en riches, suffisantes et pauvres, avec le nombre "
+             "de syllabes de chaque mot. Filtre par longueur, touche un mot pour le copier.",
+             ("Rimes classées par qualité", "Filtre par nombre de syllabes", "Inclus dans l'appli, marche sans réseau")),
+            ("conseils", "L'analyse du rythme : débit par vers, syllabes par mot et élision proposée pour raccourcir une ligne",
+             "Rythme", "Cale ton flow sur le tempo.",
+             "Pour chaque vers, Rhynote affiche le débit en syllabes par seconde et le compte mot par mot. Une ligne "
+             "déborde ? Il propose des façons de gagner des syllabes, comme l'élision « je suis » → « j'suis », à "
+             "appliquer d'un geste.",
+             ("Débit en syllabes par seconde", "Propositions pour raccourcir un vers",
+              "Un mot mal compté ? Touche-le pour corriger sa prononciation")),
+            ("notes", "La liste des notes, rangées par catégories : Album, Freestyles, Refrains, Feats",
+             "Notes", "Tous tes textes, bien rangés.",
+             "Classe tes notes par catégories, épingle celles en cours et retrouve n'importe quel texte avec la "
+             "recherche. Rhynote garde aussi les versions de tes textes.",
+             ("Catégories en couleurs", "Notes épinglées et recherche", "Versions conservées")),
+            ("scene", "Le mode scène : le texte en grand sur fond sombre, le vers en cours mis en avant",
+             "Mode scène", "Sur scène, garde le fil.",
+             "Le mode scène affiche ton texte en grand, sur fond sombre, et met en avant le vers en cours.",
+             ("Texte en grand, lisible de loin", "Vers en cours mis en avant")),
         ),
-        m_kicker="Maquettes", m_title="Du texte à la maquette, dans la même appli.",
-        m_sub="Enregistre tes prises, monte ta maquette et exporte-la en fichier audio.",
-        steps=(("Enregistre", "Fais tes prises avec le micro de ton téléphone."),
-               ("Monte", "Assemble tes prises pour construire ta maquette."),
-               ("Exporte", "Enregistre-la où tu veux ou partage-la avec l'appli de ton choix. C'est toi qui décides.")),
+        s_kicker="Studio", s_title="Un studio de poche pour tes maquettes.",
+        s_sub="Pose ta voix sur ton instru, piste par piste, avec tes paroles sous les yeux pendant que tu enregistres.",
+        s_wide_alt="Le studio en mode paysage : l'instru et les pistes Couplet, Refrain et Ad-libs sur la ligne de temps",
+        s_cards=(
+            ("maquette", "Le studio en mode portrait : paroles en haut, pistes instru, voix, piano et batterie en dessous",
+             "Multipiste", "Instru, couplet, refrain, ad-libs, piano, batterie : chaque partie a sa piste, avec muet, "
+                           "solo et enregistrement. Coupe tes prises, duplique-les et règle leur volume."),
+            ("effets", "La chaîne d'effets d'une piste voix : AutoPitch, égaliseur, compresseur, de-esser, delay",
+             "Effets voix", "AutoPitch pour corriger la justesse, du naturel à l'effet robot. Égaliseur, compresseur, "
+                            "de-esser, delay calé sur le tempo, et des presets prêts à l'emploi."),
+            ("pianoroll", "Le piano roll : des accords écrits note par note, avec la vélocité en bas",
+             "Piano roll", "Écris des accords et des mélodies note par note, avec la grille de ton choix, la "
+                           "quantification et la vélocité."),
+            ("console", "La console de mixage : tirettes, panoramiques et vumètres de chaque piste et du maître",
+             "Console", "Volume, panoramique et vumètre pour chaque piste, et une sortie maître pour équilibrer "
+                        "ton mix."),
+        ),
+        s_export="Ta maquette est prête ? Exporte-la en fichier audio, puis enregistre-la où tu veux ou partage-la "
+                 "avec l'appli de ton choix.",
         p_kicker="Confidentialité", p_title="Tes textes restent à toi.",
         p_sub="Rhynote ne collecte, ne transmet et ne vend aucune donnée. L'appli ne demande même pas "
               "l'accès à Internet : elle n'envoie jamais rien d'elle-même.",
@@ -134,14 +158,18 @@ T = {
         checks=("Aucun accès à Internet demandé", "Aucun compte utilisateur", "Ni publicité, ni mesure d'audience",
                 "Micro : seulement quand tu enregistres"),
         p_link="Lire la politique de confidentialité",
-        s_kicker="Rhynote Studio", s_title="Un achat unique, pas d'abonnement.",
-        s_text="Rhynote Studio se débloque une fois pour toutes, via Google Play. Le paiement passe entièrement "
+        b_kicker="Rhynote Studio", b_title="Un achat unique, pas d'abonnement.",
+        b_text="Rhynote Studio se débloque une fois pour toutes, via Google Play. Le paiement passe entièrement "
                "par Google : Rhynote ne reçoit aucune donnée bancaire.",
-        s_cta="Voir sur Google Play",
+        b_cta="Voir sur Google Play",
         faq_kicker="FAQ", faq_title="Questions fréquentes",
         faq=(
             ("Rhynote a-t-il besoin d'Internet ?",
-             "Non. L'appli ne demande même pas l'accès à Internet : tout fonctionne hors-ligne."),
+             "Non. L'appli ne demande même pas l'accès à Internet : l'écriture, le dictionnaire de rimes et le studio "
+             "fonctionnent hors-ligne."),
+            ("Comment Rhynote compte-t-il les syllabes ?",
+             "Il découpe chaque vers mot par mot et affiche le compte de chacun. Si un mot est mal compté, parce que tu "
+             "le prononces à ta façon, touche-le pour corriger sa prononciation : Rhynote s'en souviendra."),
             ("Où sont stockés mes textes et mes enregistrements ?",
              "Uniquement dans le stockage privé de l'appli, sur ton téléphone. Ils sont supprimés si tu désinstalles "
              "Rhynote : fais une sauvegarde avant."),
@@ -150,9 +178,9 @@ T = {
              "sauvegarde Google de ton téléphone est activée, Android peut aussi copier les données de l'appli dans "
              "ton compte Google : c'est une fonction du système, que tu contrôles dans les réglages d'Android."),
             ("Puis-je utiliser une instru YouTube ?",
-             "Oui : tu peux rattacher à un texte le lien d'une instru publiée sur YouTube. Rhynote enregistre "
-             "seulement ce lien et l'ouvre dans l'appli YouTube ou ton navigateur quand tu le demandes ; il ne "
-             "télécharge pas la vidéo. Tu peux aussi importer tes instrus en fichier audio."),
+             "Tu peux rattacher à un texte le lien d'une instru publiée sur YouTube : Rhynote enregistre seulement ce "
+             "lien et l'ouvre dans l'appli YouTube ou ton navigateur quand tu le demandes. Il ne télécharge pas la "
+             "vidéo. Pour enregistrer une maquette, importe ton instru en fichier audio."),
             ("Mes maquettes sont-elles envoyées quelque part ?",
              "Non. Une maquette exportée ne quitte ton téléphone que si tu choisis « Enregistrer sous… » ou "
              "« Partager ». Rhynote n'envoie rien de lui-même."),
@@ -160,47 +188,72 @@ T = {
             ("Comment vous contacter ?", f'Par e-mail : <a href="mailto:{MAIL}">{MAIL}</a>.'),
         ),
         final_title="Ton prochain couplet t'attend.",
-        final_text="Télécharge Rhynote et garde tes textes au même endroit, sur ton téléphone.",
+        final_text="Télécharge Rhynote : écris, rime, cale ton flow et enregistre, au même endroit.",
     ),
     "en": dict(
-        title="Rhynote · The offline lyrics notebook for rappers, singers and writers",
-        desc="Rhynote, the Android app to write your lyrics, record voice memos, import your beats and build demos. "
-             "100% offline, no data collected.",
+        title="Rhynote · Write lyrics in rhythm and record your demos",
+        desc="Rhynote, the Android app for writing lyrics: syllable counting, rhyme scheme, rhyming dictionary, rhythm "
+             "tips and a multitrack studio for your demos. 100% offline, no data collected.",
         skip="Skip to content",
-        ids=("features", "demos", "privacy"),
-        nav=("Features", "Demos", "Privacy", "FAQ"),
-        eyebrow="Offline lyrics notebook for Android",
-        h1="Write. Record. <em>Keep it all on your phone.</em>",
-        lede="Rhynote is the notebook for rappers, singers and writers: lyrics, voice memos, beats and demos in a "
-             "single app. No account, no ads, no Internet.",
-        cta="Get it on Google Play", cta2="See features",
-        chips=("100% offline", "No data collected", "No ads", "No account"),
-        ph_title="Sleepless", ph_chip="Rap", ph_meta="Draft · version 3",
-        lyrics=("I write in the ink of the night,", "the hook comes in without a sound,", "three a.m., the coffee's cold,",
-                "but the rhyme is always around."),
-        lyrics_dim=("[Chorus]", "One more line before dawn…"),
-        ph_label="Demo", ph_time="01:24",
-        f_kicker="Features", f_title="Everything you need to write.",
-        f_sub="From the first line to the demo, without leaving your phone.",
-        feats=(
-            ("pen", "Write and sort",
-             "Lyrics, poems, verses: jot down an idea in seconds and find it again with categories."),
-            ("layers", "Keep every version",
-             "Rewrite without worry: Rhynote keeps the versions of your texts, so the old one is never lost."),
-            ("speech", "Your pronunciations",
-             "Tell the app how you pronounce words your own way: names, slang, made-up words."),
-            ("mic", "Voice memos",
-             "Catch a melody or a flow the moment it comes. The recording stays on your phone."),
-            ("music", "Your beats",
-             "Import your beats as audio files, or attach the link of a beat published on YouTube to a text."),
-            ("save", "Backup",
-             "From the “Sauvegarde” (Backup) screen, create a backup file and store it wherever you choose."),
+        ids=("write", "studio", "privacy"),
+        nav=("Write", "Studio", "Privacy", "FAQ"),
+        eyebrow="For rappers, singers and writers · Android",
+        h1="Write in rhythm. <em>Record your demo.</em>",
+        lede="Rhynote counts your syllables, colors your rhymes, helps you fit your flow to the tempo and turns your "
+             "lyrics into a demo, track by track. Everything happens on your phone: no account, no ads, no Internet.",
+        cta="Get it on Google Play", cta2="Explore the app",
+        chips=("100% offline", "No data collected", "No ads", "No account", "App in French"),
+        hero_shots=(("editeur", "Rhynote's editor: each line with its syllable count and rhyme letter (app in French)"),
+                    ("dictionnaire", "Rhynote's rhyming dictionary for the French word “minuit” (midnight)")),
+        w_kicker="Write", w_title="A notebook that listens to your rhythm.",
+        w_sub="Rhynote is more than a notepad: it counts, it rhymes, and it tells you when a line runs long. "
+              "The app, its rhyming dictionary and its syllable counting are made for lyrics in French.",
+        shows=(
+            ("editeur", "The editor: syllable count per line, rhymes highlighted in color, a warning on a line that is too long",
+             "Editor", "Every syllable counts.",
+             "Rhynote counts the syllables of every line as you write. Set a target per line and a tempo: lines that "
+             "are too long or too short stand out right away.",
+             ("Syllables counted line by line", "Target per line and tempo in BPM",
+              "Color-coded rhyme scheme: A, B, C…", "Sections like [Verse], [Chorus]")),
+            ("dictionnaire", "The rhyming dictionary: rich, sufficient and weak rhymes for the word “minuit”",
+             "Rhyming dictionary", "Find the right rhyme.",
+             "Type a word: Rhynote finds its rhymes and sorts them into rich, sufficient and weak rhymes, with the "
+             "syllable count of each word. Filter by length, tap a word to copy it.",
+             ("Rhymes sorted by quality", "Filter by syllable count", "Built into the app, works offline")),
+            ("conseils", "Rhythm analysis: delivery rate per line, syllables per word and a suggested elision to shorten a line",
+             "Rhythm", "Fit your flow to the tempo.",
+             "For each line, Rhynote shows the delivery rate in syllables per second and the count word by word. A "
+             "line runs long? It suggests ways to drop syllables, such as elisions, that you apply with one tap.",
+             ("Syllables per second", "Suggestions to shorten a line",
+              "Word miscounted? Tap it to fix its pronunciation")),
+            ("notes", "The notes list, sorted into categories: Album, Freestyles, Refrains, Feats",
+             "Notes", "All your lyrics, neatly sorted.",
+             "Sort your notes into categories, pin the ones you're working on and find any text with search. "
+             "Rhynote also keeps the versions of your texts.",
+             ("Color-coded categories", "Pinned notes and search", "Versions kept")),
+            ("scene", "Stage mode: large text on a dark background, the current line highlighted",
+             "Stage mode", "On stage, never lose your place.",
+             "Stage mode shows your lyrics in large type on a dark background and highlights the current line.",
+             ("Large text, readable from afar", "Current line highlighted")),
         ),
-        m_kicker="Demos", m_title="From lyrics to demo, in the same app.",
-        m_sub="Record your takes, edit your demo and export it as an audio file.",
-        steps=(("Record", "Lay down your takes with your phone's microphone."),
-               ("Edit", "Put your takes together to build your demo."),
-               ("Export", "Save it wherever you want or share it with the app of your choice. You decide.")),
+        s_kicker="Studio", s_title="A pocket studio for your demos.",
+        s_sub="Lay your voice over your beat, track by track, with your lyrics in front of you while you record.",
+        s_wide_alt="The studio in landscape: the beat and the Verse, Chorus and Ad-libs tracks on the timeline",
+        s_cards=(
+            ("maquette", "The studio in portrait: lyrics on top, beat, vocal, piano and drum tracks below",
+             "Multitrack", "Beat, verse, chorus, ad-libs, piano, drums: each part gets its own track, with mute, solo "
+                           "and record. Cut your takes, duplicate them and set their volume."),
+            ("effets", "A vocal track's effect chain: AutoPitch, equalizer, compressor, de-esser, delay",
+             "Vocal effects", "AutoPitch to correct pitch, from natural to robotic. Equalizer, compressor, de-esser, "
+                              "tempo-synced delay, and ready-made presets."),
+            ("pianoroll", "The piano roll: chords written note by note, with velocity at the bottom",
+             "Piano roll", "Write chords and melodies note by note, with the grid of your choice, quantization and "
+                           "velocity."),
+            ("console", "The mixing console: faders, pan and meters for each track and the master",
+             "Mixer", "Volume, pan and meter for every track, plus a master output to balance your mix."),
+        ),
+        s_export="Demo ready? Export it as an audio file, then save it wherever you want or share it with the app of "
+                 "your choice.",
         p_kicker="Privacy", p_title="Your texts stay yours.",
         p_sub="Rhynote does not collect, transmit or sell any data. The app does not even request Internet "
               "access: it never sends anything by itself.",
@@ -208,14 +261,21 @@ T = {
         checks=("No Internet access requested", "No user account", "No ads, no analytics",
                 "Microphone: only when you record"),
         p_link="Read the privacy policy",
-        s_kicker="Rhynote Studio", s_title="One purchase, no subscription.",
-        s_text="Rhynote Studio is unlocked once and for all, through Google Play. Payment is handled entirely by "
+        b_kicker="Rhynote Studio", b_title="One purchase, no subscription.",
+        b_text="Rhynote Studio is unlocked once and for all, through Google Play. Payment is handled entirely by "
                "Google: Rhynote receives no payment data.",
-        s_cta="See on Google Play",
+        b_cta="See on Google Play",
         faq_kicker="FAQ", faq_title="Frequently asked questions",
         faq=(
+            ("Is Rhynote available in English?",
+             "Rhynote's interface is in French, and its rhyming dictionary and syllable counting are designed for "
+             "lyrics written in French."),
             ("Does Rhynote need Internet?",
-             "No. The app does not even request Internet access: everything works offline."),
+             "No. The app does not even request Internet access: writing, the rhyming dictionary and the studio all "
+             "work offline."),
+            ("How does Rhynote count syllables?",
+             "It splits each line word by word and shows the count for each. If a word is miscounted because you say "
+             "it your own way, tap it to fix its pronunciation: Rhynote will remember it."),
             ("Where are my texts and recordings stored?",
              "Only in the app's private storage, on your phone. They are deleted if you uninstall Rhynote, so make "
              "a backup first."),
@@ -224,9 +284,9 @@ T = {
              "If Google backup is enabled on your phone, Android may also copy the app's data to your Google "
              "account: this is a system feature that you control in Android settings."),
             ("Can I use a beat from YouTube?",
-             "Yes: you can attach the link of a beat published on YouTube to a text. Rhynote only stores the link "
-             "and opens it in the YouTube app or your browser when you ask; it does not download the video. You can "
-             "also import your beats as audio files."),
+             "You can attach the link of a beat published on YouTube to a text: Rhynote only stores the link and "
+             "opens it in the YouTube app or your browser when you ask. It does not download the video. To record a "
+             "demo, import your beat as an audio file."),
             ("Are my demos sent anywhere?",
              "No. An exported demo only leaves your phone if you choose “Save as…” or “Share”. Rhynote never sends "
              "anything by itself."),
@@ -234,7 +294,7 @@ T = {
             ("How can I contact you?", f'By e-mail: <a href="mailto:{MAIL}">{MAIL}</a>.'),
         ),
         final_title="Your next verse is waiting.",
-        final_text="Get Rhynote and keep all your texts in one place, on your phone.",
+        final_text="Get Rhynote: write, rhyme, fit your flow and record, all in one place.",
     ),
 }
 
@@ -307,10 +367,25 @@ def home(lang):
     ids = t["ids"]
     links = [(f"#{i}", n) for i, n in zip((*ids, "faq"), t["nav"])]
     chips = "".join(f"<li>{c}</li>" for c in t["chips"])
-    lyr = "".join(f"<span>{x}</span>" for x in t["lyrics"])
-    lyr += "".join(f'<span class="dim{" gap" if i == 0 else ""}">{x}</span>' for i, x in enumerate(t["lyrics_dim"]))
-    feats = "".join(f'<li class="card">{icon(i)}<h3>{h}</h3><p>{p}</p></li>' for i, h, p in t["feats"])
-    steps = "".join(f"<li><h3>{h}</h3><p>{p}</p></li>" for h, p in t["steps"])
+    (front, front_alt), (back, back_alt) = t["hero_shots"]
+    hero_media = (shot(back, back_alt, sizes="260px", cls="device back") +
+                  shot(front, front_alt, sizes="(max-width: 640px) 72vw, 300px", eager=True, cls="device front"))
+    shows = ""
+    for i, (name, alt, kicker, title, text, bullets) in enumerate(t["shows"]):
+        items = "".join(f"<li>{b}</li>" for b in bullets)
+        shows += f"""
+      <article class="show{' rev' if i % 2 else ''}">
+        <div class="show-media">{shot(name, alt)}</div>
+        <div class="show-text">
+          <p class="kicker">{kicker}</p>
+          <h3>{title}</h3>
+          <p>{text}</p>
+          <ul class="ticks">{items}</ul>
+        </div>
+      </article>"""
+    cards = "".join(
+        f'<li class="s-card">{shot(n, a, sizes="(max-width: 640px) 70vw, (max-width: 960px) 40vw, 240px")}'
+        f"<h3>{h}</h3><p>{p}</p></li>" for n, a, h, p in t["s_cards"])
     checks = "".join(f"<li>{c}</li>" for c in t["checks"])
     faq = "".join(f"<details><summary>{q}</summary><p>{a}</p></details>" for q, a in t["faq"])
     html = head(lang, t["title"], t["desc"], l["home"], alternates=[("fr", "/"), ("en", "/en"), ("x-default", "/")])
@@ -331,21 +406,7 @@ def home(lang):
       </div>
       <ul class="chips">{chips}</ul>
     </div>
-
-    <div class="phone-wrap" aria-hidden="true">
-      <div class="phone">
-        <div class="screen">
-          <div class="ph-top"><span class="ph-title">{t['ph_title']}</span><span class="ph-chip">{t['ph_chip']}</span></div>
-          <div class="ph-meta">{t['ph_meta']}</div>
-          <p class="ph-lyrics">{lyr}</p>
-          <div class="ph-bottom">
-            <div class="ph-label"><span>{t['ph_label']}</span><span>{t['ph_time']}</span></div>
-            {WAVE_HERO}
-            <div class="ph-controls"><span class="rec-dot"></span><span class="ph-time">{t['ph_time']}</span><span class="ph-bar"></span></div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="hero-shots">{hero_media}</div>
   </div>
 </header>
 
@@ -353,11 +414,10 @@ def home(lang):
   <section id="{ids[0]}">
     <div class="wrap">
       <div class="section-head">
-        <p class="kicker">{t['f_kicker']}</p>
-        <h2 class="title">{t['f_title']}</h2>
-        <p class="sub">{t['f_sub']}</p>
-      </div>
-      <ul class="grid">{feats}</ul>
+        <p class="kicker">{t['w_kicker']}</p>
+        <h2 class="title">{t['w_title']}</h2>
+        <p class="sub">{t['w_sub']}</p>
+      </div>{shows}
     </div>
   </section>
 
@@ -365,11 +425,13 @@ def home(lang):
     <div class="band-wave" aria-hidden="true"></div>
     <div class="wrap">
       <div class="section-head">
-        <p class="kicker">{t['m_kicker']}</p>
-        <h2 class="title">{t['m_title']}</h2>
-        <p class="sub">{t['m_sub']}</p>
+        <p class="kicker">{t['s_kicker']}</p>
+        <h2 class="title">{t['s_title']}</h2>
+        <p class="sub">{t['s_sub']}</p>
       </div>
-      <ol class="steps">{steps}</ol>
+      {shot("paysage", t['s_wide_alt'], sizes="(max-width: 1120px) 92vw, 1000px")}
+      <ul class="s-grid">{cards}</ul>
+      <p class="s-export">{t['s_export']}</p>
     </div>
   </section>
 
@@ -392,11 +454,11 @@ def home(lang):
     <div class="wrap">
       <div class="studio">
         <div>
-          <p class="kicker">{t['s_kicker']}</p>
-          <h2 class="title">{t['s_title']}</h2>
-          <p>{t['s_text']}</p>
+          <p class="kicker">{t['b_kicker']}</p>
+          <h2 class="title">{t['b_title']}</h2>
+          <p>{t['b_text']}</p>
         </div>
-        <a class="btn btn-solid" href="{PLAY}" rel="noopener">{PLAY_ICON}{t['s_cta']}</a>
+        <a class="btn btn-solid" href="{PLAY}" rel="noopener">{PLAY_ICON}{t['b_cta']}</a>
       </div>
     </div>
   </section>
