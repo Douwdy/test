@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://rhynote.yeeterie.org/sitemap.xml
+Sitemap: https://rhynote.app/sitemap.xml

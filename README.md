@@ -1,6 +1,6 @@
 # rhynote-site
 
-Site public de Rhynote, servi sur **https://rhynote.yeeterie.org/**.
+Site public de Rhynote, servi sur **https://rhynote.app/**.
 
 | URL | Contenu |
 | --- | --- |
@@ -13,8 +13,9 @@ Site public de Rhynote, servi sur **https://rhynote.yeeterie.org/**.
 Site 100 % statique, sans JavaScript, sans police externe ni traceur : tout est dans `public/`.
 La CSP (`public/_headers`) n'autorise que des ressources du site lui-même (`style-src 'self'`, `img-src 'self'`),
 donc pas de style en ligne (`style="…"`), pas de script, pas d'image `data:`.
-Il est hébergé comme Worker d'assets Cloudflare (compte de niivo.fr), avec le domaine personnalisé
-`rhynote.yeeterie.org` déclaré dans `wrangler.jsonc` (Cloudflare gère le DNS et le certificat).
+Il est hébergé comme Worker d'assets Cloudflare (compte de niivo.fr), avec les domaines personnalisés
+déclarés dans `wrangler.jsonc` (Cloudflare gère le DNS et les certificats) : `rhynote.app`, l'adresse principale,
+et l'ancienne adresse `rhynote.yeeterie.org`, à retirer une fois la Play Console mise à jour.
 
 ## Modifier le site
 

@@ -20,7 +20,7 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 PUBLIC = REPO / "public"
 CONTENT = REPO / "content"
 
-SITE = "https://rhynote.yeeterie.org"
+SITE = "https://rhynote.app"
 # À remplacer par l'URL exacte de la fiche : https://play.google.com/store/apps/details?id=…
 PLAY = "https://play.google.com/store/search?q=Rhynote&c=apps"
 MAIL = "Douwdy@protonmail.com"

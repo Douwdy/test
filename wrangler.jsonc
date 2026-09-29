@@ -9,6 +9,11 @@
   // Une seule adresse publique : l'adresse workers.dev reste coupée.
   "workers_dev": false,
 
-  // Domaine personnalisé : Cloudflare crée lui-même l'enregistrement DNS et le certificat.
-  "routes": [{ "pattern": "rhynote.yeeterie.org", "custom_domain": true }]
+  // Domaines personnalisés : Cloudflare crée lui-même les enregistrements DNS et les certificats.
+  // rhynote.app est l'adresse principale (URLs canoniques, sitemap). rhynote.yeeterie.org reste servi
+  // tant que la Play Console pointe encore dessus ; le retirer ensuite.
+  "routes": [
+    { "pattern": "rhynote.app", "custom_domain": true },
+    { "pattern": "rhynote.yeeterie.org", "custom_domain": true }
+  ]
 }

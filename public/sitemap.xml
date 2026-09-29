@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://rhynote.yeeterie.org/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://rhynote.yeeterie.org/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://rhynote.yeeterie.org/en"/>
+    <loc>https://rhynote.app/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://rhynote.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://rhynote.app/en"/>
   </url>
   <url>
-    <loc>https://rhynote.yeeterie.org/en</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://rhynote.yeeterie.org/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://rhynote.yeeterie.org/en"/>
+    <loc>https://rhynote.app/en</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://rhynote.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://rhynote.app/en"/>
   </url>
   <url>
-    <loc>https://rhynote.yeeterie.org/confidentialite</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://rhynote.yeeterie.org/confidentialite"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://rhynote.yeeterie.org/en/privacy"/>
+    <loc>https://rhynote.app/confidentialite</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://rhynote.app/confidentialite"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://rhynote.app/en/privacy"/>
   </url>
   <url>
-    <loc>https://rhynote.yeeterie.org/en/privacy</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://rhynote.yeeterie.org/confidentialite"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://rhynote.yeeterie.org/en/privacy"/>
+    <loc>https://rhynote.app/en/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://rhynote.app/confidentialite"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://rhynote.app/en/privacy"/>
   </url>
 </urlset>
