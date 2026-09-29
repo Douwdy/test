@@ -4,26 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rhynote · Page introuvable / Page not found</title>
+<meta name="description" content="Cette page n'existe pas.">
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#3D3B8E">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <header class="hero compact">
   <div class="site-header">
     <div class="wrap">
-      <a class="brand" href="/" aria-label="Rhynote"><img src="/icon.svg" alt="" width="40" height="40">Rhynote</a>
+      <a class="brand" href="/" aria-label="Rhynote, accueil"><img src="/icon.svg" alt="" width="40" height="40">Rhynote</a>
     </div>
   </div>
-  <div class="wrap page-title"><p>&nbsp;</p></div>
+  <div class="wrap page-title">
+    <h1>Page introuvable</h1>
+    <p lang="en">Page not found</p>
+  </div>
 </header>
+
 <main class="wrap notfound">
-  <div class="big">404</div>
-  <p lang="fr">Cette page n'existe pas (ou plus). Retour à l'accueil ?</p>
-  <p lang="en">This page doesn't exist (anymore). Back to the home page?</p>
-  <a class="btn btn-solid" href="/">Rhynote</a>
+  <p class="big" aria-hidden="true">404</p>
+  <p>Cette page n'existe pas, ou plus.<br><span lang="en">This page doesn't exist, or no longer does.</span></p>
+  <div class="cta-row center">
+    <a class="btn btn-solid" href="/">Accueil</a>
+    <a class="btn btn-outline" href="/en" hreflang="en" lang="en">Home (English)</a>
+  </div>
 </main>
 </body>
 </html>

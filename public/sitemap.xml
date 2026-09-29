@@ -12,5 +12,12 @@
   </url>
   <url>
     <loc>https://rhynote.yeeterie.org/confidentialite</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://rhynote.yeeterie.org/confidentialite"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://rhynote.yeeterie.org/en/privacy"/>
+  </url>
+  <url>
+    <loc>https://rhynote.yeeterie.org/en/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://rhynote.yeeterie.org/confidentialite"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://rhynote.yeeterie.org/en/privacy"/>
   </url>
 </urlset>
