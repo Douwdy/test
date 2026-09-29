@@ -1,0 +1,13 @@
+{
+  "name": "rhynote-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Site public de Rhynote (accueil FR/EN et politique de confidentialité), servi sur https://rhynote.yeeterie.org/",
+  "scripts": {
+    "preview": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.135.0"
+  }
+}

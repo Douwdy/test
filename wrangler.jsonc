@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rhynote-site",
+  "compatibility_date": "2026-09-24",
+
+  // Site entièrement statique : Cloudflare sert le dossier public/, sans code.
+  "assets": { "directory": "./public", "html_handling": "drop-trailing-slash", "not_found_handling": "404-page" },
+
+  // Une seule adresse publique : l'adresse workers.dev reste coupée.
+  "workers_dev": false,
+
+  // Domaine personnalisé : Cloudflare crée lui-même l'enregistrement DNS et le certificat.
+  "routes": [{ "pattern": "rhynote.yeeterie.org", "custom_domain": true }]
+}
