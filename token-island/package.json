@@ -1,0 +1,30 @@
+{
+  "name": "token-island",
+  "productName": "Token Island",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Encoche façon Dynamic Island pour Windows qui suit la consommation de tokens IA (Claude, GPT, Gemini, Grok…)",
+  "main": "src/main/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "app.tokenisland",
+    "productName": "Token Island",
+    "files": ["src/**/*", "package.json"],
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

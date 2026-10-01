@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <title>Token Island — Réglages</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Token Island</h1>
+      <p class="lead">Une encoche en haut de l'écran qui compte les tokens consommés chez Claude, GPT, Gemini, Grok et les autres.</p>
+
+      <section>
+        <h2>1. Brancher tes outils sur le proxy local</h2>
+        <p>
+          Le proxy transmet tes requêtes telles quelles à l'API officielle et lit le nombre de tokens dans la réponse.
+          Tes clés d'API restent dans tes outils : l'app ne les lit pas et ne les enregistre pas.
+          Il suffit de changer l'adresse de base de l'API dans l'outil ou le script :
+        </p>
+        <div id="proxy-status" class="status"></div>
+        <table class="routes" id="routes"></table>
+        <p class="hint">
+          Variables d'environnement Windows (PowerShell, pour l'utilisateur courant ; rouvre ensuite ton terminal) :
+        </p>
+        <pre id="env-snippet"></pre>
+        <button id="copy-env" class="secondary">Copier</button>
+        <p class="hint">
+          Pour nommer l'outil dans l'encoche, ajoute l'en-tête <code>X-Token-Island-App: MonScript</code> à tes requêtes.
+          Les abonnements web (claude.ai, chatgpt.com, gemini.google.com, grok.com) ne passent pas par une API et ne
+          peuvent pas être comptés ainsi.
+        </p>
+        <div class="grid">
+          <label class="check"><input type="checkbox" id="proxy-enabled" /> Proxy activé</label>
+          <label>Port <input type="number" id="proxy-port" min="1024" max="65535" /></label>
+          <label class="check wide">
+            <input type="checkbox" id="proxy-inject" />
+            <span>Demander l'usage dans les flux OpenAI / Grok / DeepSeek (<code>stream_options.include_usage</code>)</span>
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <h2>2. Outils en ligne de commande (lecture des journaux)</h2>
+        <div class="source">
+          <h3>Claude Code</h3>
+          <div id="cc-detected" class="detected"></div>
+          <div class="grid">
+            <label class="check"><input type="checkbox" id="cc-enabled" /> Lire les journaux de Claude Code</label>
+            <label class="check"><input type="checkbox" id="cc-sub" /> Utilisé avec un abonnement Pro / Max</label>
+          </div>
+          <label class="block">Dossiers supplémentaires (un par ligne, ex. <code>\\wsl$\Ubuntu\home\moi\.claude\projects</code>)
+            <textarea id="cc-paths" rows="2"></textarea>
+          </label>
+          <label class="block">Limite de tokens par bloc de 5 h, pour la jauge (0 = pas de jauge)
+            <input type="number" id="cc-limit" min="0" step="100000" />
+          </label>
+        </div>
+        <div class="source">
+          <h3>Codex CLI (OpenAI)</h3>
+          <div id="codex-detected" class="detected"></div>
+          <div class="grid">
+            <label class="check"><input type="checkbox" id="codex-enabled" /> Lire les journaux de Codex</label>
+            <label class="check"><input type="checkbox" id="codex-sub" /> Utilisé avec un abonnement ChatGPT</label>
+          </div>
+          <label class="block">Dossiers supplémentaires (un par ligne)
+            <textarea id="codex-paths" rows="2"></textarea>
+          </label>
+        </div>
+        <p class="hint">Avec un abonnement, les tokens sont comptés mais le coût affiché n'est qu'un équivalent API, hors budget.</p>
+      </section>
+
+      <section>
+        <h2>3. API d'administration (facultatif)</h2>
+        <p>
+          Elles voient toute la consommation de ton organisation, même celle qui ne passe pas par le proxy (Cursor, serveurs…),
+          avec quelques minutes de retard. Quand l'une est active, les requêtes du même fournisseur vues par le proxy ne
+          sont plus comptées, pour éviter le double comptage.
+        </p>
+        <div class="source" data-admin="anthropicAdmin">
+          <h3>Anthropic <span class="muted">— clé <code>sk-ant-admin…</code>, console Claude → Settings → Admin keys</span></h3>
+          <div class="grid">
+            <label class="check"><input type="checkbox" id="anthropicAdmin-enabled" /> Activer</label>
+            <label>Clé <input type="password" id="anthropicAdmin-key" autocomplete="off" /></label>
+          </div>
+          <div class="row">
+            <button class="secondary" data-action="save-key">Enregistrer la clé</button>
+            <button class="secondary" data-action="test">Tester</button>
+            <button class="secondary" data-action="forget">Oublier la clé</button>
+            <span class="result" id="anthropicAdmin-result"></span>
+          </div>
+        </div>
+        <div class="source" data-admin="openaiAdmin">
+          <h3>OpenAI <span class="muted">— platform.openai.com → Settings → Organization → Admin keys</span></h3>
+          <div class="grid">
+            <label class="check"><input type="checkbox" id="openaiAdmin-enabled" /> Activer</label>
+            <label>Clé <input type="password" id="openaiAdmin-key" autocomplete="off" /></label>
+          </div>
+          <div class="row">
+            <button class="secondary" data-action="save-key">Enregistrer la clé</button>
+            <button class="secondary" data-action="test">Tester</button>
+            <button class="secondary" data-action="forget">Oublier la clé</button>
+            <span class="result" id="openaiAdmin-result"></span>
+          </div>
+        </div>
+        <p class="hint" id="encryption-hint"></p>
+      </section>
+
+      <section>
+        <h2>4. Budget et alertes</h2>
+        <div class="grid">
+          <label>Budget mensuel (USD, 0 = aucun) <input type="number" id="budget-usd" min="0" step="1" /></label>
+          <label>Limite de tokens par jour (0 = aucune) <input type="number" id="budget-tokens" min="0" step="100000" /></label>
+          <label>Seuils d'alerte en % <input type="text" id="budget-alerts" placeholder="50, 80, 100" /></label>
+          <label class="check"><input type="checkbox" id="budget-sub" /> Compter aussi les abonnements dans le budget</label>
+        </div>
+      </section>
+
+      <section>
+        <h2>5. Affichage</h2>
+        <div class="grid">
+          <label>Devise
+            <select id="currency">
+              <option value="USD">Dollar (prix des API)</option>
+              <option value="EUR">Euro (conversion)</option>
+            </select>
+          </label>
+          <label>Taux 1 USD = … EUR <input type="number" id="usd-eur" min="0" step="0.01" placeholder="ex. 0,86" /></label>
+          <label>Écran <select id="display"></select></label>
+          <label>Décalage depuis le haut (px) <input type="number" id="offset-y" min="0" max="200" /></label>
+          <label>Raccourci déplier / replier <input type="text" id="shortcut" placeholder="CommandOrControl+Alt+T" /></label>
+          <label class="check"><input type="checkbox" id="show-cost" /> Afficher les coûts</label>
+          <label class="check"><input type="checkbox" id="live" /> Animation à chaque requête</label>
+          <label class="check"><input type="checkbox" id="autostart" /> Lancer au démarrage de Windows</label>
+        </div>
+      </section>
+
+      <section>
+        <h2>6. Tarifs personnalisés</h2>
+        <p>
+          Les tarifs intégrés sont indicatifs (dollars par million de tokens). Ajoute ou corrige des modèles ici, ils passent
+          avant les tarifs intégrés. <code>match</code> est une expression régulière sur le nom du modèle.
+        </p>
+        <textarea id="pricing" rows="5" spellcheck="false" placeholder='[{ "match": "mon-modele", "input": 1, "output": 4, "cacheRead": 0.1 }]'></textarea>
+        <span class="result" id="pricing-error"></span>
+      </section>
+
+      <section>
+        <h2>7. Données</h2>
+        <p id="data-info"></p>
+        <div class="row">
+          <button class="secondary" id="export">Exporter en CSV</button>
+          <button class="secondary" id="open-data">Ouvrir le dossier</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="savebar">
+      <span id="save-result" class="result"></span>
+      <button id="save">Enregistrer</button>
+    </footer>
+    <script src="format.js"></script>
+    <script src="settings.js"></script>
+  </body>
+</html>

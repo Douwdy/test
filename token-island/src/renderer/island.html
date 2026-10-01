@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:" />
+    <title>Token Island</title>
+    <link rel="stylesheet" href="island.css" />
+  </head>
+  <body>
+    <div id="island" class="island" data-state="compact">
+      <!-- Vue compacte : toujours visible -->
+      <div class="compact">
+        <span class="dot" id="dot"></span>
+        <span class="c-tokens" id="c-tokens">—</span>
+        <span class="c-sep">·</span>
+        <span class="c-cost" id="c-cost">—</span>
+        <span class="c-rate" id="c-rate"></span>
+      </div>
+
+      <!-- Activité en direct : une requête vient de se terminer -->
+      <div class="live" id="live">
+        <span class="live-badge" id="live-provider"></span>
+        <span class="live-model" id="live-model"></span>
+        <span class="live-tokens" id="live-tokens"></span>
+        <span class="live-cost" id="live-cost"></span>
+      </div>
+
+      <!-- Vue dépliée -->
+      <div class="expanded">
+        <header class="x-head">
+          <div>
+            <div class="label">Aujourd'hui</div>
+            <div class="big"><span id="x-tokens">0</span> <small>tokens</small></div>
+            <div class="sub" id="x-split"></div>
+          </div>
+          <div class="ring-wrap" id="ring-wrap">
+            <svg viewBox="0 0 44 44" class="ring" aria-hidden="true">
+              <circle cx="22" cy="22" r="18" class="ring-bg" />
+              <circle cx="22" cy="22" r="18" class="ring-fg" id="ring-fg" />
+            </svg>
+            <div class="ring-text">
+              <div class="ring-cost" id="x-cost">0</div>
+              <div class="ring-sub" id="x-cost-sub">ce mois</div>
+            </div>
+          </div>
+        </header>
+
+        <section class="spark-wrap">
+          <svg id="spark" class="spark" viewBox="0 0 240 36" preserveAspectRatio="none" aria-label="Tokens des 24 dernières heures"></svg>
+          <div class="spark-legend"><span>-24 h</span><span id="x-rate"></span><span>maintenant</span></div>
+        </section>
+
+        <section class="cols">
+          <div class="col">
+            <div class="label">Par fournisseur</div>
+            <ul id="providers" class="bars"></ul>
+          </div>
+          <div class="col">
+            <div class="label">Modèles</div>
+            <ul id="models" class="models"></ul>
+          </div>
+        </section>
+
+        <section class="limits" id="limits"></section>
+
+        <footer class="x-foot">
+          <span id="x-proxy" class="pill-status"></span>
+          <span id="x-projection" class="muted"></span>
+          <button id="btn-settings" class="icon-btn" title="Réglages" aria-label="Réglages">⚙</button>
+        </footer>
+      </div>
+    </div>
+    <script src="format.js"></script>
+    <script src="island.js"></script>
+  </body>
+</html>
