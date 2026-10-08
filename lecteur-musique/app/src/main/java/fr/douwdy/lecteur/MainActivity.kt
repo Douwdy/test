@@ -3,11 +3,13 @@ package fr.douwdy.lecteur
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -15,26 +17,21 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,9 +39,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -59,12 +58,17 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import fr.douwdy.lecteur.ui.LibraryState
 import fr.douwdy.lecteur.ui.MusicViewModel
-import fr.douwdy.lecteur.ui.components.EmptyMessage
+import fr.douwdy.lecteur.ui.components.Message
 import fr.douwdy.lecteur.ui.components.MiniPlayer
+import fr.douwdy.lecteur.ui.components.PillButton
+import fr.douwdy.lecteur.ui.components.ToastHost
+import fr.douwdy.lecteur.ui.components.ToastState
 import fr.douwdy.lecteur.ui.screens.CollectionScreen
 import fr.douwdy.lecteur.ui.screens.LibraryScreen
 import fr.douwdy.lecteur.ui.screens.PlayerScreen
+import fr.douwdy.lecteur.ui.theme.Icons
 import fr.douwdy.lecteur.ui.theme.LecteurTheme
+import fr.douwdy.lecteur.ui.theme.Theme
 
 class MainActivity : ComponentActivity() {
 
@@ -72,14 +76,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Interface toujours sombre : icônes claires dans les barres système.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
         if (savedInstanceState == null) handleViewIntent(intent)
 
         setContent {
             LecteurTheme {
-                Surface(color = MaterialTheme.colorScheme.background) {
-                    App(viewModel)
-                }
+                App(viewModel)
             }
         }
     }
@@ -108,6 +114,9 @@ private object Routes {
     fun artist(name: String) = "artist/${Uri.encode(name)}"
     fun folder(path: String) = "folder/${Uri.encode(path)}"
 }
+
+/** Hauteur occupée par le mini-lecteur flottant, marges comprises. */
+private val MINI_PLAYER_HEIGHT = 80.dp
 
 /** Types de fichiers proposés par le sélecteur : l'audio, plus les conteneurs souvent mal étiquetés. */
 private val PICKABLE_TYPES = arrayOf(
@@ -172,58 +181,60 @@ private fun App(viewModel: MusicViewModel) {
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val playerState by viewModel.player.state.collectAsStateWithLifecycle()
-    val snackbar = remember { SnackbarHostState() }
+    val toast = remember { ToastState() }
 
     val unplayable = stringResource(R.string.error_unplayable)
     val unplayableUnknown = stringResource(R.string.error_unplayable_unknown)
     LaunchedEffect(Unit) {
         viewModel.player.errors.collect { title ->
-            snackbar.showSnackbar(if (title.isBlank()) unplayableUnknown else unplayable.format(title))
+            toast.show(if (title.isBlank()) unplayableUnknown else unplayable.format(title))
         }
     }
 
-    val onPlayer = backStack?.destination?.route == Routes.PLAYER
-    Scaffold(
-        contentWindowInsets = WindowInsets(0),
-        snackbarHost = { SnackbarHost(snackbar) },
-        bottomBar = {
+    val showMiniPlayer = playerState.hasMedia && backStack?.destination?.route != Routes.PLAYER
+    val navBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val bottomPadding = navBar + if (playerState.hasMedia) MINI_PLAYER_HEIGHT else 0.dp
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Theme.colors.background),
+    ) {
+        AppNavHost(
+            navController = navController,
+            viewModel = viewModel,
+            bottomPadding = bottomPadding,
+            openFiles = openFiles,
+            permissionGate = if (granted) {
+                null
+            } else {
+                {
+                    PermissionScreen(
+                        permanentlyDenied = permanentlyDenied,
+                        onRequest = { permissionLauncher.launch(audioPermission) },
+                        onOpenFiles = openFiles,
+                    )
+                }
+            },
+        )
+
+        Column(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding(),
+        ) {
+            ToastHost(toast)
             AnimatedVisibility(
-                visible = playerState.hasMedia && !onPlayer,
-                enter = expandVertically(),
-                exit = shrinkVertically(),
+                visible = showMiniPlayer,
+                enter = slideInVertically { it } + fadeIn(),
+                exit = slideOutVertically { it } + fadeOut(),
             ) {
                 MiniPlayer(
                     state = playerState,
                     connection = viewModel.player,
                     onOpen = { navController.navigate(Routes.PLAYER) { launchSingleTop = true } },
-                    modifier = Modifier.navigationBarsPadding(),
                 )
             }
-        },
-    ) { padding ->
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .consumeWindowInsets(padding),
-        ) {
-            AppNavHost(
-                navController = navController,
-                viewModel = viewModel,
-                currentMediaId = playerState.mediaId,
-                openFiles = openFiles,
-                permissionGate = if (granted) {
-                    null
-                } else {
-                    {
-                        PermissionScreen(
-                            permanentlyDenied = permanentlyDenied,
-                            onRequest = { permissionLauncher.launch(audioPermission) },
-                            onOpenFiles = openFiles,
-                        )
-                    }
-                },
-            )
         }
     }
 }
@@ -232,7 +243,7 @@ private fun App(viewModel: MusicViewModel) {
 private fun AppNavHost(
     navController: NavHostController,
     viewModel: MusicViewModel,
-    currentMediaId: String?,
+    bottomPadding: Dp,
     openFiles: () -> Unit,
     /** Écran affiché à la place de la bibliothèque tant que la permission n'est pas accordée. */
     permissionGate: (@Composable () -> Unit)?,
@@ -242,8 +253,17 @@ private fun AppNavHost(
     val query by viewModel.query.collectAsStateWithLifecycle()
     val playerState by viewModel.player.state.collectAsStateWithLifecycle()
     val loaded = (library as? LibraryState.Loaded)?.library
+    val currentMediaId = playerState.mediaId
+    val isPlaying = playerState.isPlaying
 
-    NavHost(navController, startDestination = Routes.LIBRARY) {
+    NavHost(
+        navController = navController,
+        startDestination = Routes.LIBRARY,
+        enterTransition = { fadeIn() + slideInVertically { it / 12 } },
+        exitTransition = { fadeOut() },
+        popEnterTransition = { fadeIn() },
+        popExitTransition = { fadeOut() + slideOutVertically { it / 12 } },
+    ) {
         composable(Routes.LIBRARY) {
             if (permissionGate != null) {
                 permissionGate()
@@ -254,6 +274,8 @@ private fun AppNavHost(
                 state = filtered,
                 query = query,
                 currentMediaId = currentMediaId,
+                isPlaying = isPlaying,
+                bottomPadding = bottomPadding,
                 onOpenAlbum = { navController.navigate(Routes.album(it)) },
                 onOpenArtist = { navController.navigate(Routes.artist(it)) },
                 onOpenFolder = { navController.navigate(Routes.folder(it)) },
@@ -267,12 +289,15 @@ private fun AppNavHost(
                 return@composable
             }
             CollectionScreen(
+                kind = stringResource(R.string.kind_album),
                 title = album.title,
                 subtitle = album.artist,
                 tracks = album.tracks,
                 coverUri = album.tracks.first().uri,
                 isAlbum = true,
                 currentMediaId = currentMediaId,
+                isPlaying = isPlaying,
+                bottomPadding = bottomPadding,
                 onPlay = { viewModel.playTracks(album.tracks, it) },
                 onShuffle = { viewModel.shuffle(album.tracks) },
                 onBack = navController::popBackStack,
@@ -286,10 +311,13 @@ private fun AppNavHost(
                 return@composable
             }
             CollectionScreen(
+                kind = stringResource(R.string.kind_artist),
                 title = artist.name,
                 subtitle = null,
                 tracks = artist.tracks,
                 currentMediaId = currentMediaId,
+                isPlaying = isPlaying,
+                bottomPadding = bottomPadding,
                 onPlay = { viewModel.playTracks(artist.tracks, it) },
                 onShuffle = { viewModel.shuffle(artist.tracks) },
                 onBack = navController::popBackStack,
@@ -303,10 +331,13 @@ private fun AppNavHost(
                 return@composable
             }
             CollectionScreen(
+                kind = stringResource(R.string.kind_folder),
                 title = folder.name,
                 subtitle = folder.path,
                 tracks = folder.tracks,
                 currentMediaId = currentMediaId,
+                isPlaying = isPlaying,
+                bottomPadding = bottomPadding,
                 onPlay = { viewModel.playTracks(folder.tracks, it) },
                 onShuffle = { viewModel.shuffle(folder.tracks) },
                 onBack = navController::popBackStack,
@@ -338,37 +369,47 @@ private fun PermissionScreen(
     onOpenFiles: () -> Unit,
 ) {
     val context = LocalContext.current
-    EmptyMessage(
-        title = stringResource(R.string.permission_title),
-        body = stringResource(R.string.permission_text),
-        modifier = Modifier.padding(top = 96.dp),
-        action = {
-            Icon(
-                Icons.Rounded.LibraryMusic,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Button(
-                onClick = {
-                    if (permanentlyDenied) {
-                        context.startActivity(
-                            Intent(
-                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                Uri.fromParts("package", context.packageName, null),
-                            ),
-                        )
-                    } else {
-                        onRequest()
-                    }
-                },
-            ) {
-                Text(
-                    stringResource(if (permanentlyDenied) R.string.permission_settings else R.string.permission_grant),
-                )
-            }
-            TextButton(onClick = onOpenFiles) {
-                Text(stringResource(R.string.action_open_files))
-            }
-        },
-    )
+    Box(
+        Modifier
+            .fillMaxSize()
+            .statusBarsPadding(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Message(
+            title = stringResource(R.string.permission_title),
+            body = stringResource(R.string.permission_text),
+            actions = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(top = 8.dp),
+                ) {
+                    PillButton(
+                        text = stringResource(
+                            if (permanentlyDenied) R.string.permission_settings else R.string.permission_grant,
+                        ),
+                        icon = null,
+                        onClick = {
+                            if (permanentlyDenied) {
+                                context.startActivity(
+                                    Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.fromParts("package", context.packageName, null),
+                                    ),
+                                )
+                            } else {
+                                onRequest()
+                            }
+                        },
+                    )
+                    PillButton(
+                        text = stringResource(R.string.action_open_files),
+                        icon = Icons.Open,
+                        onClick = onOpenFiles,
+                        filled = false,
+                    )
+                }
+            },
+        )
+    }
 }

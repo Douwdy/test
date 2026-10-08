@@ -1,74 +1,79 @@
 package fr.douwdy.lecteur.ui.screens
 
 import android.net.Uri
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import fr.douwdy.lecteur.R
 import fr.douwdy.lecteur.data.Track
 import fr.douwdy.lecteur.ui.components.Artwork
+import fr.douwdy.lecteur.ui.components.IconBtn
 import fr.douwdy.lecteur.ui.components.PlayButtons
 import fr.douwdy.lecteur.ui.components.TrackRow
+import fr.douwdy.lecteur.ui.components.Txt
 import fr.douwdy.lecteur.ui.components.formatDuration
+import fr.douwdy.lecteur.ui.theme.Icons
+import fr.douwdy.lecteur.ui.theme.Theme
 
 /** Contenu d'un album, d'un artiste ou d'un dossier. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CollectionScreen(
+    kind: String,
     title: String,
     subtitle: String?,
     tracks: List<Track>,
     currentMediaId: String?,
+    isPlaying: Boolean,
+    bottomPadding: Dp,
     onPlay: (startIndex: Int) -> Unit,
     onShuffle: () -> Unit,
     onBack: () -> Unit,
     coverUri: Uri? = null,
     isAlbum: Boolean = false,
 ) {
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
-        },
-    ) { padding ->
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = padding) {
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)) {
             item(key = "header") {
-                Header(title, subtitle, tracks, coverUri)
+                if (coverUri != null) {
+                    CoverHeader(kind, title, subtitle, coverUri)
+                } else {
+                    TextHeader(kind, title, subtitle)
+                }
+            }
+            item(key = "meta") {
+                Txt(
+                    stringResource(
+                        R.string.separator,
+                        pluralStringResource(R.plurals.tracks_count, tracks.size, tracks.size),
+                        formatDuration(tracks.sumOf { it.durationMs }),
+                    ).uppercase(),
+                    Theme.type.label,
+                    color = Theme.colors.textDim,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                )
             }
             item(key = "buttons") {
                 PlayButtons(onPlay = { onPlay(0) }, onShuffle = onShuffle)
@@ -76,51 +81,71 @@ fun CollectionScreen(
             itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
                 TrackRow(
                     track = track,
-                    isCurrent = track.mediaId == currentMediaId,
+                    state = rowState(track.mediaId, currentMediaId, isPlaying),
                     onClick = { onPlay(index) },
-                    showArtwork = !isAlbum,
                     showTrackNumber = isAlbum,
                 )
             }
         }
+
+        // Bouton retour flottant, lisible sur la pochette comme sur le fond.
+        IconBtn(
+            icon = Icons.Back,
+            contentDescription = stringResource(R.string.action_back),
+            onClick = onBack,
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(8.dp)
+                .clip(CircleShape)
+                .background(Theme.colors.background.copy(alpha = 0.6f)),
+        )
+    }
+}
+
+/** Pochette en pleine largeur qui se fond dans le fond, titre posé dessus. */
+@Composable
+private fun CoverHeader(kind: String, title: String, subtitle: String?, coverUri: Uri) {
+    val colors = Theme.colors
+    val coverPx = LocalWindowInfo.current.containerSize.width
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
+    ) {
+        Artwork(coverUri, coverPx, RectangleShape, Modifier.fillMaxSize())
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        0.45f to Color.Transparent,
+                        1f to colors.background,
+                    ),
+                ),
+        )
+        HeaderText(kind, title, subtitle, Modifier.align(Alignment.BottomStart))
     }
 }
 
 @Composable
-private fun Header(title: String, subtitle: String?, tracks: List<Track>, coverUri: Uri?) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        if (coverUri != null) {
-            val px = with(LocalDensity.current) { 220.dp.roundToPx() }
-            Artwork(coverUri, px, RoundedCornerShape(16.dp), Modifier.size(220.dp))
-        }
-        Text(
-            title,
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp),
-        )
+private fun TextHeader(kind: String, title: String, subtitle: String?) {
+    Column(Modifier.statusBarsPadding()) {
+        Spacer(Modifier.height(64.dp))
+        HeaderText(kind, title, subtitle)
+    }
+}
+
+@Composable
+private fun HeaderText(kind: String, title: String, subtitle: String?, modifier: Modifier = Modifier) {
+    val colors = Theme.colors
+    Column(modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+        Txt(kind.uppercase(), Theme.type.label, color = colors.accent)
+        Spacer(Modifier.height(6.dp))
+        Txt(title, Theme.type.display, maxLines = 3)
         if (subtitle != null) {
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-            )
+            Spacer(Modifier.height(4.dp))
+            Txt(subtitle, Theme.type.title, color = colors.textDim, maxLines = 2)
         }
-        Text(
-            stringResource(
-                R.string.separator,
-                pluralStringResource(R.plurals.tracks_count, tracks.size, tracks.size),
-                formatDuration(tracks.sumOf { it.durationMs }),
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }

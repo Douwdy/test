@@ -3,6 +3,7 @@ package fr.douwdy.lecteur.playback
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -11,6 +12,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,7 +78,15 @@ class PlayerConnection(context: Context, scope: CoroutineScope) {
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
         scope.launch {
-            val connected = future.await()
+            // Sans service, l'interface reste utilisable (bibliothèque) au lieu de planter.
+            val connected = try {
+                future.await()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Connexion au service de lecture impossible", e)
+                return@launch
+            }
             if (released) {
                 connected.release()
                 return@launch
@@ -196,4 +206,8 @@ class PlayerConnection(context: Context, scope: CoroutineScope) {
 
     private fun uriOf(item: MediaItem): Uri =
         item.localConfiguration?.uri ?: item.requestMetadata.mediaUri ?: item.mediaId.toUri()
+
+    private companion object {
+        const val TAG = "PlayerConnection"
+    }
 }

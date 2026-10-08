@@ -1,7 +1,18 @@
 # Lecteur — lecteur de musique Android
 
-Application Android (Kotlin, Jetpack Compose, Material 3) qui lit la musique du téléphone,
+Application Android (Kotlin, Jetpack Compose) qui lit la musique du téléphone,
 avec les décodeurs FFmpeg intégrés pour les formats que le téléphone ne sait pas lire tout seul.
+
+## Interface
+
+Design maison, sans Material : uniquement Compose Foundation, avec des composants, des icônes et un thème
+écrits pour l'app (`ui/theme`, `ui/components`).
+
+- Fond noir chaud, texte crème, un seul accent orange pour ce qui joue.
+- Titres en **Instrument Serif**, texte en **Space Grotesk**, chiffres et étiquettes en **JetBrains Mono**
+  (polices libres OFL, licences dans `licences-polices/`).
+- Le lecteur plein écran prend la couleur dominante de la pochette ; un égaliseur animé signale le morceau en cours.
+- Les morceaux sans pochette reçoivent un dégradé propre à chacun.
 
 ## Fonctionnalités
 
@@ -10,10 +21,9 @@ avec les décodeurs FFmpeg intégrés pour les formats que le téléphone ne sai
 - **Lecture** : tout lire, aléatoire, répétition (tout / un titre), file d'attente, barre de progression.
 - **Arrière-plan** : notification de lecture, écran de verrouillage, boutons du casque et de la montre,
   pause automatique quand on débranche le casque, gestion des appels et des autres apps audio.
-- **Ouvrir des fichiers** hors bibliothèque (menu ⋮ → « Ouvrir des fichiers »),
+- **Ouvrir des fichiers** hors bibliothèque (icône dossier en haut),
   ou depuis une autre app via « Ouvrir avec… → Lecteur ».
 - Un fichier illisible est **sauté** automatiquement, avec un message qui dit lequel.
-- Thème clair/sombre, couleurs du fond d'écran sur Android 12+.
 
 ## Formats
 
@@ -56,6 +66,12 @@ remplacer `signingConfig` dans `app/build.gradle.kts` par une vraie clé.
 
 Android 8.0 (API 26) minimum.
 
+Captures d'écran des écrans principaux, rendues sur la JVM sans téléphone (Robolectric + Roborazzi) :
+
+```sh
+./gradlew testDebugUnitTest   # → app/build/screenshots/*.png
+```
+
 ## Organisation du code
 
 ```
@@ -71,8 +87,8 @@ app/src/main/java/fr/douwdy/lecteur/
 │   └── MediaItems.kt          conversion Track → MediaItem
 └── ui/
     ├── MusicViewModel.kt      état de la bibliothèque, recherche, commandes
-    ├── theme/Theme.kt
-    ├── components/            lignes de liste, pochette, mini-lecteur
+    ├── theme/                 couleurs, typographies, icônes dessinées
+    ├── components/            texte, boutons, barre de progression, lignes, mini-lecteur, messages
     └── screens/               bibliothèque, album/artiste/dossier, lecteur plein écran
 ```
 
