@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import fr.douwdy.lecteur.R
 import fr.douwdy.lecteur.playback.PlayerConnection
@@ -187,7 +188,7 @@ private fun Controls(state: PlayerUiState, connection: PlayerConnection) {
             active = state.shuffle,
             onClick = connection::toggleShuffle,
         )
-        IconBtn(Icons.Previous, stringResource(R.string.cd_previous), connection::previous, size = 56.dp, iconSize = 30.dp)
+        IconBtn(Icons.Previous, stringResource(R.string.cd_previous), connection::previous, size = 56.dp, iconSize = 26.dp)
         Box(
             modifier = Modifier
                 .size(78.dp)
@@ -200,32 +201,55 @@ private fun Controls(state: PlayerUiState, connection: PlayerConnection) {
             Glyph(
                 if (state.isPlaying) Icons.Pause else Icons.Play,
                 tint = colors.onAccent,
-                size = 34.dp,
+                size = 28.dp,
                 contentDescription = stringResource(if (state.isPlaying) R.string.cd_pause else R.string.cd_play),
             )
         }
-        IconBtn(Icons.Next, stringResource(R.string.cd_next), connection::next, size = 56.dp, iconSize = 30.dp)
-        val (repeatIcon, repeatLabel) = when (state.repeatMode) {
-            Player.REPEAT_MODE_ONE -> Icons.RepeatOne to R.string.cd_repeat_one
-            Player.REPEAT_MODE_ALL -> Icons.Repeat to R.string.cd_repeat_all
-            else -> Icons.Repeat to R.string.cd_repeat_off
+        IconBtn(Icons.Next, stringResource(R.string.cd_next), connection::next, size = 56.dp, iconSize = 26.dp)
+        val repeatLabel = when (state.repeatMode) {
+            Player.REPEAT_MODE_ONE -> R.string.cd_repeat_one
+            Player.REPEAT_MODE_ALL -> R.string.cd_repeat_all
+            else -> R.string.cd_repeat_off
         }
         Toggle(
-            icon = repeatIcon,
+            icon = Icons.Repeat,
             label = stringResource(repeatLabel),
             active = state.repeatMode != Player.REPEAT_MODE_OFF,
             onClick = connection::cycleRepeatMode,
+            // Font Awesome Free n'a pas d'icône « répéter un titre » : un « 1 » s'ajoute à la répétition.
+            badge = if (state.repeatMode == Player.REPEAT_MODE_ONE) "1" else null,
         )
     }
 }
 
 /** Bouton à deux états : orange avec un point dessous quand il est actif. */
 @Composable
-private fun Toggle(icon: ImageVector, label: String, active: Boolean, onClick: () -> Unit) {
+private fun Toggle(
+    icon: ImageVector,
+    label: String,
+    active: Boolean,
+    onClick: () -> Unit,
+    badge: String? = null,
+) {
     val colors = Theme.colors
     val tint by animateColorAsState(if (active) colors.accent else colors.textDim, label = "toggle")
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        IconBtn(icon, label, onClick, tint = tint)
+        Box {
+            IconBtn(icon, label, onClick, tint = tint)
+            if (badge != null) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 4.dp, end = 2.dp)
+                        .size(15.dp)
+                        .clip(CircleShape)
+                        .background(colors.accent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Txt(badge, Theme.type.label.copy(fontSize = 9.sp), color = colors.onAccent)
+                }
+            }
+        }
         Box(
             Modifier
                 .size(4.dp)

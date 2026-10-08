@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -127,7 +126,7 @@ fun EntryRow(
                     .background(colors.surface, RoundedCornerShape(6.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Glyph(icon, tint = colors.accent)
+                Glyph(icon, tint = colors.accent, size = 22.dp)
             }
         } else {
             Artwork(artworkUri, THUMB_PX, CircleShape, Modifier.size(52.dp))
@@ -137,7 +136,7 @@ fun EntryRow(
             Txt(title, Theme.type.title, maxLines = 1)
             Txt(subtitle, Theme.type.small, color = colors.textDim, maxLines = 1)
         }
-        Glyph(Icons.Back, tint = colors.textFaint, size = 18.dp, modifier = Modifier.flipped())
+        Glyph(Icons.Forward, tint = colors.textFaint, size = 14.dp)
     }
 }
 
@@ -170,6 +169,3 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
         modifier = modifier.padding(horizontal = 20.dp, vertical = 8.dp),
     )
 }
-
-/** Retourne une icône horizontalement (flèche retour → flèche suivante). */
-fun Modifier.flipped(): Modifier = graphicsLayer { scaleX = -1f }

@@ -2,7 +2,15 @@ package fr.douwdy.lecteur
 
 import android.app.Application
 import android.content.ComponentName
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -89,7 +97,7 @@ class ScreenshotTest {
         isPlaying = true,
         durationMs = tracks[3].durationMs,
         shuffle = true,
-        repeatMode = Player.REPEAT_MODE_ALL,
+        repeatMode = Player.REPEAT_MODE_ONE,
         queue = tracks.mapIndexed { i, t -> QueueEntry(i, t.title, t.artist, i == 3) },
     )
 
@@ -160,6 +168,32 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription("File d'attente").performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("build/screenshots/5-file-attente.png")
+    }
+
+    /** Icône de l'app, avec le masque rond le plus courant et le cercle de la zone sûre (66 dp). */
+    @Test
+    fun launcherIcon() {
+        compose.setContent {
+            Box(
+                Modifier
+                    .size(216.dp)
+                    .clip(CircleShape)
+                    .background(colorResource(R.color.ic_launcher_background)),
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                Box(
+                    Modifier
+                        .align(Alignment.Center)
+                        .size(132.dp)
+                        .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+                )
+            }
+        }
+        compose.onRoot().captureRoboImage("build/screenshots/0-icone.png")
     }
 
     @Composable

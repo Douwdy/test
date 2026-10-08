@@ -5,12 +5,15 @@ avec les décodeurs FFmpeg intégrés pour les formats que le téléphone ne sai
 
 ## Interface
 
-Design maison, sans Material : uniquement Compose Foundation, avec des composants, des icônes et un thème
+Design maison, sans Material : uniquement Compose Foundation, avec des composants et un thème
 écrits pour l'app (`ui/theme`, `ui/components`).
+
+- Icônes **Font Awesome Free** (style solid), y compris celle de l'app : la note orange sur fond noir.
 
 - Fond noir chaud, texte crème, un seul accent orange pour ce qui joue.
 - Titres en **Instrument Serif**, texte en **Space Grotesk**, chiffres et étiquettes en **JetBrains Mono**
-  (polices libres OFL, licences dans `licences-polices/`).
+  (polices libres OFL).
+- Licences des polices (SIL OFL 1.1) et de Font Awesome (icônes CC BY 4.0) dans `licences/`.
 - Le lecteur plein écran prend la couleur dominante de la pochette ; un égaliseur animé signale le morceau en cours.
 - Les morceaux sans pochette reçoivent un dégradé propre à chacun.
 
@@ -87,10 +90,13 @@ app/src/main/java/fr/douwdy/lecteur/
 │   └── MediaItems.kt          conversion Track → MediaItem
 └── ui/
     ├── MusicViewModel.kt      état de la bibliothèque, recherche, commandes
-    ├── theme/                 couleurs, typographies, icônes dessinées
+    ├── theme/                 couleurs, typographies, icônes Font Awesome
     ├── components/            texte, boutons, barre de progression, lignes, mini-lecteur, messages
     └── screens/               bibliothèque, album/artiste/dossier, lecteur plein écran
 ```
+
+Les icônes de `ui/theme/Icons.kt` sont générées depuis les SVG du paquet npm
+`@fortawesome/fontawesome-free` (tracés recopiés tels quels, chaque glyphe centré dans un carré de 512).
 
 ## Versions
 

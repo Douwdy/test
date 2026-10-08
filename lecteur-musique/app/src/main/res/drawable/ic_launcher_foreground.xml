@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Note de musique centrée dans la zone sûre (66 dp) de l'icône adaptative. -->
+<!-- Note de musique (Font Awesome Free « music », CC BY 4.0) en orange, centrée dans la zone sûre de l'icône adaptative. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group
-        android:scaleX="1.5"
-        android:scaleY="1.5"
-        android:translateX="25.5"
-        android:translateY="29.8">
+        android:scaleX="0.0781"
+        android:scaleY="0.0781"
+        android:translateX="35.2"
+        android:translateY="35.2">
         <path
-            android:fillColor="#FFE9DDFF"
-            android:pathData="M18,3v13.55C17.06,16.02 15.98,15.75 14.83,15.75 11.07,15.75 8,18.8 8,22.5S11.07,29.25 14.83,29.25 21.67,26.2 21.67,22.5V9.75H30V3H18z" />
+            android:fillColor="#FFFF5B2E"
+            android:pathData="M468 7c7.6 6.1 12 15.3 12 25l0 304c0 44.2-43 80-96 80s-96-35.8-96-80 43-80 96-80c11.2 0 22 1.6 32 4.6l0-116.7-224 49.8 0 206.3c0 44.2-43 80-96 80s-96-35.8-96-80 43-80 96-80c11.2 0 22 1.6 32 4.6L128 96c0-15 10.4-28 25.1-31.2l288-64c9.5-2.1 19.4 .2 27 6.3z" />
     </group>
 </vector>

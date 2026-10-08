@@ -76,7 +76,7 @@ fun Glyph(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     tint: Color = Theme.colors.text,
-    size: Dp = 24.dp,
+    size: Dp = 20.dp,
     contentDescription: String? = null,
 ) {
     Image(
@@ -126,7 +126,7 @@ fun IconBtn(
     modifier: Modifier = Modifier,
     tint: Color = Theme.colors.text,
     size: Dp = 44.dp,
-    iconSize: Dp = 24.dp,
+    iconSize: Dp = 20.dp,
 ) {
     Box(
         modifier = modifier
@@ -166,7 +166,7 @@ fun PillButton(
         horizontalArrangement = Arrangement.Center,
     ) {
         if (icon != null) {
-            Glyph(icon, tint = content, size = 18.dp)
+            Glyph(icon, tint = content, size = 14.dp)
             Spacer(Modifier.width(8.dp))
         }
         Txt(text.uppercase(), Theme.type.label, color = content, maxLines = 1)

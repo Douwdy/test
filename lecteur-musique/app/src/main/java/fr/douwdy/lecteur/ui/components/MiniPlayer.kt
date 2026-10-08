@@ -89,11 +89,11 @@ fun MiniPlayer(
                 Glyph(
                     if (state.isPlaying) Icons.Pause else Icons.Play,
                     tint = colors.background,
-                    size = 20.dp,
+                    size = 16.dp,
                     contentDescription = stringResource(if (state.isPlaying) R.string.cd_pause else R.string.cd_play),
                 )
             }
-            IconBtn(Icons.Next, stringResource(R.string.cd_next), connection::next)
+            IconBtn(Icons.Next, stringResource(R.string.cd_next), connection::next, iconSize = 18.dp)
         }
         // Fine ligne de progression en bas de la carte.
         Canvas(
