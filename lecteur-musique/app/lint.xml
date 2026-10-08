@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Les textes sont en français : le correcteur anglais ne fait que de faux positifs. -->
+    <issue id="Typos" severity="ignore" />
+    <!-- aapt exige le suffixe -v26 pour une icône adaptative sans version PNG de repli. -->
+    <issue id="ObsoleteSdkInt">
+        <ignore path="src/main/res/mipmap-anydpi-v26" />
+    </issue>
+</lint>

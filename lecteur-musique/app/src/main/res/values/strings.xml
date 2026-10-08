@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lecteur</string>
+
+    <!-- Bibliothèque -->
+    <string name="unknown_artist">Artiste inconnu</string>
+    <string name="unknown_album">Album inconnu</string>
+    <string name="various_artists">Artistes multiples</string>
+    <string name="tab_tracks">Titres</string>
+    <string name="tab_albums">Albums</string>
+    <string name="tab_artists">Artistes</string>
+    <string name="tab_folders">Dossiers</string>
+    <string name="search_hint">Titre, artiste, album…</string>
+    <string name="action_search">Rechercher</string>
+    <string name="action_close_search">Fermer la recherche</string>
+    <string name="action_open_files">Ouvrir des fichiers</string>
+    <string name="action_refresh">Actualiser la bibliothèque</string>
+    <string name="action_back">Retour</string>
+    <string name="action_more">Plus d\'options</string>
+    <string name="play_all">Tout lire</string>
+    <string name="shuffle_all">Aléatoire</string>
+    <string name="empty_library">Aucune musique trouvée</string>
+    <string name="empty_library_hint">Copiez des fichiers audio sur le téléphone (dossier Musique par exemple), ou ouvrez-les directement avec le bouton ci-dessous.</string>
+    <string name="no_results">Aucun résultat</string>
+    <string name="separator">%1$s · %2$s</string>
+
+    <plurals name="tracks_count">
+        <item quantity="one">%d titre</item>
+        <item quantity="many">%d titres</item>
+        <item quantity="other">%d titres</item>
+    </plurals>
+    <plurals name="albums_count">
+        <item quantity="one">%d album</item>
+        <item quantity="many">%d albums</item>
+        <item quantity="other">%d albums</item>
+    </plurals>
+
+    <!-- Permission -->
+    <string name="permission_title">Accès à votre musique</string>
+    <string name="permission_text">Le lecteur a besoin de lire les fichiers audio du téléphone pour afficher votre bibliothèque. Rien ne quitte l\'appareil.</string>
+    <string name="permission_grant">Autoriser</string>
+    <string name="permission_settings">Ouvrir les paramètres</string>
+
+    <!-- Lecteur -->
+    <string name="now_playing">Lecture en cours</string>
+    <string name="queue_title">File d\'attente</string>
+    <string name="cd_play">Lecture</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_next">Suivant</string>
+    <string name="cd_previous">Précédent</string>
+    <string name="cd_shuffle">Lecture aléatoire</string>
+    <string name="cd_repeat_off">Répétition désactivée</string>
+    <string name="cd_repeat_all">Tout répéter</string>
+    <string name="cd_repeat_one">Répéter le titre</string>
+    <string name="cd_queue">File d\'attente</string>
+    <string name="cd_collapse">Réduire le lecteur</string>
+    <string name="error_unplayable">Impossible de lire « %s » : format non pris en charge ou fichier abîmé.</string>
+    <string name="error_unplayable_unknown">Ce fichier ne peut pas être lu : format non pris en charge ou fichier abîmé.</string>
+</resources>
