@@ -171,7 +171,7 @@ class PlayerConnection(context: Context, scope: CoroutineScope) {
             hasMedia = item != null,
             mediaId = item?.mediaId,
             mediaUri = item?.let(::uriOf),
-            artworkUri = metadata.artworkUri?.takeIf { it.scheme == "file" } ?: item?.let(::uriOf),
+            artworkUri = metadata.artworkUri ?: item?.let(::uriOf),
             title = metadata.title?.toString()
                 ?: metadata.displayTitle?.toString()
                 ?: item?.mediaId?.let { it.toUri().lastPathSegment }

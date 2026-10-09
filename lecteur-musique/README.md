@@ -41,10 +41,13 @@ chaque fichier n'est analysé qu'une fois, et de nouveau seulement s'il est modi
 | MP3, AIFF | ID3 | oui |
 | FLAC, Ogg Vorbis, Opus | commentaires Vorbis | oui |
 | M4A (AAC, ALAC) | atomes iTunes | oui |
-| WAV | bloc ID3 ou liste INFO | avec ID3 |
+| WAV | bloc ID3 (même hors structure ou après un bloc mal formé) ou liste INFO | avec ID3 |
 | MKA, WebM | non (les tags Matroska ne sont pas lus) | non |
 
-Les tests `TagReaderTest` et `MusicRepositoryTest` le vérifient sur de vrais fichiers
+La pochette suit la même logique partout (listes, lecteur, notification, écran de verrouillage) :
+vignette d'Android, sinon image intégrée lue par Android, sinon image relue par l'app dans le fichier.
+
+Les tests `TagReaderTest`, `ArtworkLoaderTest` et `MusicRepositoryTest` le vérifient sur de vrais fichiers
 (`app/src/test/resources/tags/`), avec un faux MediaStore qui se comporte comme celui de ces téléphones.
 
 ## Formats

@@ -39,6 +39,20 @@ class TagReaderTest {
 
     @Test fun wavId3() = assertFullTags("wav-id3.wav")
 
+    // Variantes d'ID3 dans un WAV rencontrées selon le logiciel de tag ou d'enregistrement.
+
+    /** Bloc « ID3 » en majuscules (TagLib : Kid3, Picard…). */
+    @Test fun wavId3Uppercase() = assertFullTags("wav-id3-majuscules.wav")
+
+    /** Tag ID3 collé après la fin du RIFF, hors de la structure en blocs. */
+    @Test fun wavId3AfterRiff() = assertFullTags("wav-id3-apres-riff.wav")
+
+    /** Bloc de taille impaire sans octet de remplissage : le parcours des blocs se décale. */
+    @Test fun wavUnpaddedOddChunk() = assertFullTags("wav-bloc-impair.wav")
+
+    /** Enregistrement en flux : tailles RIFF et data à 0xFFFFFFFF. */
+    @Test fun wavStreamedSizes() = assertFullTags("wav-flux.wav")
+
     /** Liste INFO : pas d'artiste d'album ni de disque dans ce format. */
     @Test
     fun wavInfo() {

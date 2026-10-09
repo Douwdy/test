@@ -99,7 +99,6 @@ class FakeMediaStore : ContentProvider() {
                 MediaStore.Audio.Media.TITLE to name.substringBeforeLast('.'),
                 MediaStore.Audio.Media.ARTIST to MediaStore.UNKNOWN_STRING,
                 MediaStore.Audio.Media.ALBUM to "Music",
-                MediaStore.Audio.Media.ALBUM_ID to 1L,
                 MediaStore.Audio.Media.DURATION to 1000L,
                 MediaStore.Audio.Media.TRACK to 0,
                 MediaStore.Audio.Media.DISPLAY_NAME to name,

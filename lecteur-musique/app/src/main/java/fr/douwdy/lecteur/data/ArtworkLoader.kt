@@ -42,7 +42,9 @@ object ArtworkLoader {
                 if (uri.isExtractedImage()) {
                     extractedImage(uri, sizePx)
                 } else {
-                    thumbnail(context, uri, sizePx) ?: embeddedPicture(context, uri, sizePx)
+                    thumbnail(context, uri, sizePx)
+                        ?: embeddedPicture(context, uri, sizePx)
+                        ?: taggedPicture(context, uri, sizePx)
                 }
             }
         }
@@ -79,6 +81,13 @@ object ArtworkLoader {
         }.getOrNull()
     }
 
+    /**
+     * Dernier recours : la pochette lue par l'app elle-même dans le fichier, pour les formats dont
+     * Android ne sait pas l'extraire (WAV, AIFF, Opus selon les téléphones…).
+     */
+    private suspend fun taggedPicture(context: Context, uri: Uri, sizePx: Int): Bitmap? =
+        TagReader.read(context, uri)?.artwork?.let { decode(it, sizePx) }
+
     private fun embeddedPicture(context: Context, uri: Uri, sizePx: Int): Bitmap? {
         val bytes = runCatching {
             val retriever = MediaMetadataRetriever()
@@ -89,7 +98,10 @@ object ArtworkLoader {
                 retriever.release()
             }
         }.getOrNull() ?: return null
+        return decode(bytes, sizePx)
+    }
 
+    private fun decode(bytes: ByteArray, sizePx: Int): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
         return BitmapFactory.decodeByteArray(

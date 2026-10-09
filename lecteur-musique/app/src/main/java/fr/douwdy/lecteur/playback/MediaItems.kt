@@ -18,7 +18,7 @@ fun Track.toMediaItem(): MediaItem = MediaItem.Builder()
             .setAlbumTitle(album)
             .setAlbumArtist(albumArtist)
             .setTrackNumber(trackNumber.takeIf { it > 0 })
-            .setArtworkUri(artworkUri)
+            .setArtworkUri(coverUri)
             .setIsBrowsable(false)
             .setIsPlayable(true)
             .build(),
@@ -41,7 +41,7 @@ fun externalMediaItem(uri: Uri, displayName: String?, tags: Tags?, artworkFile: 
                 .setAlbumTitle(tags?.album)
                 .setAlbumArtist(tags?.albumArtist)
                 .setTrackNumber(tags?.trackNumber)
-                .setArtworkUri(artworkFile?.let(Uri::fromFile))
+                .setArtworkUri(artworkFile?.let(Uri::fromFile) ?: uri)
                 .setIsBrowsable(false)
                 .setIsPlayable(true)
                 .build(),

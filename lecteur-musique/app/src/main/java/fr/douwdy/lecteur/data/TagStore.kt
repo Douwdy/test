@@ -123,6 +123,7 @@ class TagStore(context: Context) {
     private fun String.toFileName() = replace(Regex("[^A-Za-z0-9_-]"), "_") + ".img"
 
     private companion object {
-        const val VERSION = 1
+        /** À augmenter quand la lecture des tags s'améliore : tout est alors relu une fois. */
+        const val VERSION = 2
     }
 }

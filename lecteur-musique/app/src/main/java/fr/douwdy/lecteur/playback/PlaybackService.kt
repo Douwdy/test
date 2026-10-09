@@ -27,6 +27,7 @@ import fr.douwdy.lecteur.MainActivity
 class PlaybackService : MediaSessionService() {
 
     private var session: MediaSession? = null
+    private var bitmapLoader: ArtworkBitmapLoader? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -54,7 +55,9 @@ class PlaybackService : MediaSessionService() {
             .build()
         player.addListener(SkipUnplayableListener(player))
 
+        val artwork = ArtworkBitmapLoader(this).also { bitmapLoader = it }
         session = MediaSession.Builder(this, player)
+            .setBitmapLoader(artwork)
             .setSessionActivity(openAppIntent())
             .setCallback(SessionCallback)
             .build()
@@ -76,6 +79,8 @@ class PlaybackService : MediaSessionService() {
             release()
         }
         session = null
+        bitmapLoader?.release()
+        bitmapLoader = null
         super.onDestroy()
     }
 

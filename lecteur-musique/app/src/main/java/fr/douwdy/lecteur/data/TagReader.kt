@@ -19,9 +19,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.io.DataInputStream
-import java.io.EOFException
-import java.io.InputStream
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 
 /** Tags lus directement dans un fichier audio. Les champs absents du fichier restent null. */
 class Tags(
@@ -124,48 +124,110 @@ object TagReader {
      * bloc « id3 » (WAV et AIFF) et liste « INFO » (WAV), convertie en trames ID3 équivalentes.
      */
     private fun chunkTags(context: Context, uri: Uri): List<Metadata> {
-        val stream = context.contentResolver.openInputStream(uri) ?: return emptyList()
-        return DataInputStream(stream.buffered()).use { input ->
-            val header = ByteArray(12)
-            input.readFully(header)
-            val type = String(header, 0, 4, Charsets.US_ASCII)
-            val form = String(header, 8, 4, Charsets.US_ASCII)
-            val littleEndian = when {
-                type == "RIFF" && form == "WAVE" -> true
-                type == "FORM" && (form == "AIFF" || form == "AIFC") -> false
-                else -> return@use emptyList()
-            }
-            readChunks(input, littleEndian)
-        }
+        val descriptor = context.contentResolver.openFileDescriptor(uri, "r") ?: return emptyList()
+        return descriptor.use { FileInputStream(it.fileDescriptor).channel.use { channel -> chunkTags(channel) } }
     }
 
-    private fun readChunks(input: DataInputStream, littleEndian: Boolean): List<Metadata> {
+    private fun chunkTags(file: FileChannel): List<Metadata> {
+        val length = file.size()
+        val header = file.readAt(0, 12) ?: return emptyList()
+        val type = String(header, 0, 4, Charsets.US_ASCII)
+        val form = String(header, 8, 4, Charsets.US_ASCII)
+        val littleEndian = when {
+            type == "RIFF" && form == "WAVE" -> true
+            type == "FORM" && (form == "AIFF" || form == "AIFC") -> false
+            else -> return emptyList()
+        }
+
         val found = mutableListOf<Metadata>()
-        val id = ByteArray(4)
-        try {
-            while (true) {
-                input.readFully(id)
-                val size = input.readSize(littleEndian)
-                val padded = size + (size and 1)
-                val name = String(id, Charsets.US_ASCII)
-                when {
-                    name.equals("id3 ", ignoreCase = true) && size <= MAX_CHUNK_BYTES -> {
-                        val data = ByteArray(size.toInt()).also(input::readFully)
-                        Id3Decoder().decode(data, data.size)?.let(found::add)
-                        input.skipFully(padded - size)
+        var hasId3 = false
+        var position = 12L
+        while (position + 8 <= length) {
+            val chunk = file.readAt(position, 8) ?: break
+            val name = String(chunk, 0, 4, Charsets.US_ASCII)
+            val size = chunk.sizeAt(4, littleEndian)
+            val body = position + 8
+            // Taille impossible : enregistrement en flux (0xFFFFFFFF), fichier tronqué ou parcours décalé
+            // par un bloc impair sans octet de remplissage. La suite est cherchée autrement, plus bas.
+            if (size > length - body) break
+            when {
+                name.equals("id3 ", ignoreCase = true) && size <= MAX_CHUNK_BYTES ->
+                    file.readAt(body, size.toInt())?.let(::decodeId3)?.let {
+                        found += it
+                        hasId3 = true
                     }
-                    name == "LIST" && littleEndian && size in 4..MAX_CHUNK_BYTES -> {
-                        val data = ByteArray(size.toInt()).also(input::readFully)
-                        if (String(data, 0, 4, Charsets.US_ASCII) == "INFO") parseInfo(data)?.let(found::add)
-                        input.skipFully(padded - size)
-                    }
-                    else -> input.skipFully(padded)
+                name == "LIST" && littleEndian && size in 4..MAX_CHUNK_BYTES -> {
+                    val data = file.readAt(body, size.toInt())
+                    if (data != null && String(data, 0, 4, Charsets.US_ASCII) == "INFO") parseInfo(data)?.let(found::add)
                 }
             }
-        } catch (_: EOFException) {
-            // Fin du fichier : tous les blocs ont été vus.
+            position = body + size + (size and 1)
         }
+        // Pas d'ID3 trouvé en suivant les blocs : il peut être collé après le RIFF, ou après un bloc mal formé.
+        if (!hasId3) findId3InTail(file, length)?.let(found::add)
         return found
+    }
+
+    /**
+     * Cherche un tag ID3v2 complet dans la fin du fichier, où les logiciels de tag l'ajoutent.
+     * L'en-tête est vérifié (version, taille « synchsafe », fin dans le fichier) pour ne pas
+     * confondre trois octets « ID3 » pris au hasard dans le son ou une image.
+     */
+    private fun findId3InTail(file: FileChannel, length: Long): Metadata? {
+        val windowStart = (length - TAIL_SCAN_BYTES).coerceAtLeast(0)
+        val window = file.readAt(windowStart, (length - windowStart).toInt()) ?: return null
+        var i = 0
+        while (i + 10 <= window.size) {
+            if (window[i] == 'I'.code.toByte() && window[i + 1] == 'D'.code.toByte() && window[i + 2] == '3'.code.toByte()) {
+                val tagSize = id3TagSize(window, i)
+                if (tagSize != null && i + tagSize <= window.size) {
+                    decodeId3(window.copyOfRange(i, i + tagSize))?.let { return it }
+                }
+            }
+            i++
+        }
+        return null
+    }
+
+    /** Taille totale d'un tag ID3v2 commençant à [offset], ou null si l'en-tête n'est pas valide. */
+    private fun id3TagSize(data: ByteArray, offset: Int): Int? {
+        val version = data[offset + 3].toInt() and 0xFF
+        val revision = data[offset + 4].toInt() and 0xFF
+        val flags = data[offset + 5].toInt() and 0xFF
+        if (version !in 2..4 || revision == 0xFF) return null
+        var size = 0
+        for (k in 6..9) {
+            val b = data[offset + k].toInt() and 0xFF
+            if (b >= 0x80) return null
+            size = (size shl 7) or b
+        }
+        if (size == 0) return null
+        val footer = if (version == 4 && flags and 0x10 != 0) 10 else 0
+        return 10 + size + footer
+    }
+
+    private fun decodeId3(data: ByteArray): Metadata? =
+        runCatching { Id3Decoder().decode(data, data.size) }.getOrNull()?.takeIf { it.length() > 0 }
+
+    private fun FileChannel.readAt(position: Long, count: Int): ByteArray? {
+        if (count < 0) return null
+        val buffer = ByteBuffer.allocate(count)
+        var at = position
+        while (buffer.hasRemaining()) {
+            val read = read(buffer, at)
+            if (read <= 0) return null
+            at += read
+        }
+        return buffer.array()
+    }
+
+    private fun ByteArray.sizeAt(offset: Int, littleEndian: Boolean): Long {
+        val b = (0..3).map { this[offset + it].toLong() and 0xFF }
+        return if (littleEndian) {
+            b[0] or (b[1] shl 8) or (b[2] shl 16) or (b[3] shl 24)
+        } else {
+            (b[0] shl 24) or (b[1] shl 16) or (b[2] shl 8) or b[3]
+        }
     }
 
     /** Liste « INFO » d'un WAV : INAM (titre), IART (artiste), IPRD (album), IPRT/ITRK (piste). */
@@ -191,27 +253,9 @@ object TagReader {
         while (end > offset && data[end - 1] == 0.toByte()) end--
         val bytes = data.copyOfRange(offset, end)
         val decoder = Charsets.UTF_8.newDecoder()
-        val text = runCatching { decoder.decode(java.nio.ByteBuffer.wrap(bytes)).toString() }
+        val text = runCatching { decoder.decode(ByteBuffer.wrap(bytes)).toString() }
             .getOrElse { String(bytes, Charsets.ISO_8859_1) }
         return text.trim()
-    }
-
-    private fun DataInputStream.readSize(littleEndian: Boolean): Long {
-        val raw = readInt()
-        return (if (littleEndian) Integer.reverseBytes(raw) else raw).toLong() and 0xFFFFFFFFL
-    }
-
-    private fun InputStream.skipFully(count: Long) {
-        var left = count
-        while (left > 0) {
-            val skipped = skip(left)
-            if (skipped <= 0) {
-                if (read() == -1) throw EOFException()
-                left--
-            } else {
-                left -= skipped
-            }
-        }
     }
 
     private val INFO_TO_ID3 = mapOf(
@@ -224,4 +268,7 @@ object TagReader {
 
     private const val TIMEOUT_MS = 10_000L
     private const val MAX_CHUNK_BYTES = 16L * 1024 * 1024
+
+    /** Fin de fichier explorée pour retrouver un ID3 hors blocs : de quoi contenir une grande pochette. */
+    private const val TAIL_SCAN_BYTES = 8L * 1024 * 1024
 }

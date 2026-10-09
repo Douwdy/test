@@ -1,8 +1,6 @@
 package fr.douwdy.lecteur.data
 
-import android.content.ContentUris
 import android.net.Uri
-import androidx.core.net.toUri
 import java.io.File
 
 /**
@@ -16,7 +14,6 @@ data class Track(
     val artist: String,
     val album: String,
     val albumArtist: String?,
-    val albumId: Long,
     val durationMs: Long,
     /** Numéro de piste sans le numéro de disque (0 si inconnu). */
     val trackNumber: Int,
@@ -39,13 +36,7 @@ data class Track(
     /** Ce qu'il faut charger pour afficher la pochette : l'image extraite, sinon le fichier audio. */
     val coverUri: Uri get() = artworkFile?.let(Uri::fromFile) ?: uri
 
-    /** Pochette pour la notification : l'image extraite, sinon celle de l'album selon MediaStore. */
-    val artworkUri: Uri
-        get() = artworkFile?.let(Uri::fromFile) ?: ContentUris.withAppendedId(ALBUM_ART_BASE, albumId)
 
-    private companion object {
-        val ALBUM_ART_BASE: Uri = "content://media/external/audio/albumart".toUri()
-    }
 }
 
 data class Album(

@@ -215,7 +215,6 @@ class ScreenshotTest {
         artist = artist,
         album = album,
         albumArtist = null,
-        albumId = album.hashCode().toLong(),
         durationMs = duration,
         trackNumber = number,
         discNumber = 0,

@@ -141,7 +141,6 @@ class MusicRepository(private val context: Context) {
             add(MediaStore.Audio.Media.TITLE)
             add(MediaStore.Audio.Media.ARTIST)
             add(MediaStore.Audio.Media.ALBUM)
-            add(MediaStore.Audio.Media.ALBUM_ID)
             add(MediaStore.Audio.Media.DURATION)
             add(MediaStore.Audio.Media.TRACK)
             add(MediaStore.Audio.Media.DISPLAY_NAME)
@@ -173,7 +172,6 @@ class MusicRepository(private val context: Context) {
         val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
         val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
         val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-        val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
         val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
         val trackCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
         val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
@@ -204,7 +202,6 @@ class MusicRepository(private val context: Context) {
                 artist = cursor.getString(artistCol).cleanTag() ?: unknownArtist,
                 album = cursor.getString(albumCol).cleanTag() ?: unknownAlbum,
                 albumArtist = if (albumArtistCol >= 0) cursor.getString(albumArtistCol).cleanTag() else null,
-                albumId = cursor.getLong(albumIdCol),
                 durationMs = cursor.getLong(durationCol),
                 trackNumber = rawTrack % 1000,
                 discNumber = rawTrack / 1000,
