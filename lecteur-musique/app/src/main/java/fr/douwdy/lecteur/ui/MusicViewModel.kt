@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.text.Normalizer
 
 sealed interface LibraryState {
@@ -82,7 +83,10 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     fun refresh() {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
-            _library.value = LibraryState.Loaded(repository.load())
+            val library = repository.load()
+            _library.value = LibraryState.Loaded(library)
+            // Puis complète, en arrière-plan, les morceaux dont Android n'a pas su lire les tags.
+            repository.enrich(library).collect { _library.value = LibraryState.Loaded(it) }
         }
     }
 
@@ -104,11 +108,20 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         if (uris.isEmpty()) return
         viewModelScope.launch {
             val items = withContext(Dispatchers.IO) {
-                uris.map { externalMediaItem(it, displayNameOf(it)) }
+                uris.map { uri ->
+                    val tags = repository.readTags(uri)
+                    externalMediaItem(uri, displayNameOf(uri), tags, tags?.artwork?.let { saveExternalArtwork(uri, it) })
+                }
             }
             player.play(items)
         }
     }
+
+    /** Pochette d'un fichier ouvert hors bibliothèque, posée dans le cache pour l'écran et la notification. */
+    private fun saveExternalArtwork(uri: Uri, bytes: ByteArray): File? = runCatching {
+        val dir = File(getApplication<Application>().cacheDir, "pochettes-externes").apply { mkdirs() }
+        File(dir, "${uri.toString().hashCode().toUInt()}.img").apply { writeBytes(bytes) }
+    }.getOrNull()
 
     private fun displayNameOf(uri: Uri): String? = runCatching {
         getApplication<Application>().contentResolver

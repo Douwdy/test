@@ -13,8 +13,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.extractor.DefaultExtractorsFactory
-import androidx.media3.extractor.mp3.Mp3Extractor
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.Futures
@@ -39,17 +37,10 @@ class PlaybackService : MediaSessionService() {
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
             .setEnableDecoderFallback(true)
 
-        // Recherche précise dans les MP3 à débit variable sans en-tête d'index, et AIFF en plus.
-        val extractorsFactory = WithAiffExtractorsFactory(
-            DefaultExtractorsFactory()
-                .setConstantBitrateSeekingEnabled(true)
-                .setMp3ExtractorFlags(Mp3Extractor.FLAG_ENABLE_INDEX_SEEKING),
-        )
-
         val player = ExoPlayer.Builder(
             this,
             renderersFactory,
-            DefaultMediaSourceFactory(this, extractorsFactory),
+            DefaultMediaSourceFactory(this, audioExtractorsFactory()),
         )
             .setAudioAttributes(
                 AudioAttributes.Builder()

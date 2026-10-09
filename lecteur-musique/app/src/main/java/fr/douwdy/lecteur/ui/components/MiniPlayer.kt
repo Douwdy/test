@@ -72,7 +72,7 @@ fun MiniPlayer(
             modifier = Modifier.padding(start = 8.dp, end = 6.dp, top = 8.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Artwork(state.mediaUri, 144, RoundedCornerShape(10.dp), Modifier.size(46.dp))
+            Artwork(state.artworkUri, 144, RoundedCornerShape(10.dp), Modifier.size(46.dp))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Txt(state.title, Theme.type.title, maxLines = 1)

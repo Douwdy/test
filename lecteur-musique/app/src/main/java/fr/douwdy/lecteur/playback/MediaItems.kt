@@ -3,7 +3,9 @@ package fr.douwdy.lecteur.playback
 import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import fr.douwdy.lecteur.data.Tags
 import fr.douwdy.lecteur.data.Track
+import java.io.File
 
 fun Track.toMediaItem(): MediaItem = MediaItem.Builder()
     .setMediaId(mediaId)
@@ -16,7 +18,7 @@ fun Track.toMediaItem(): MediaItem = MediaItem.Builder()
             .setAlbumTitle(album)
             .setAlbumArtist(albumArtist)
             .setTrackNumber(trackNumber.takeIf { it > 0 })
-            .setArtworkUri(albumArtUri)
+            .setArtworkUri(artworkUri)
             .setIsBrowsable(false)
             .setIsPlayable(true)
             .build(),
@@ -24,18 +26,24 @@ fun Track.toMediaItem(): MediaItem = MediaItem.Builder()
     .build()
 
 /**
- * Fichier ouvert depuis une autre app ou le sélecteur de fichiers : on ne connaît que son nom,
- * le reste (titre, artiste, pochette) sera lu dans ses tags au moment de la lecture.
+ * Fichier ouvert depuis une autre app ou le sélecteur de fichiers, décrit par ses propres tags.
+ * Sans tags, le nom du fichier sert de titre.
  */
-fun externalMediaItem(uri: Uri, displayName: String?): MediaItem = MediaItem.Builder()
-    .setMediaId(uri.toString())
-    .setUri(uri)
-    .setRequestMetadata(MediaItem.RequestMetadata.Builder().setMediaUri(uri).build())
-    .setMediaMetadata(
-        MediaMetadata.Builder()
-            .setTitle(displayName?.substringBeforeLast('.'))
-            .setIsBrowsable(false)
-            .setIsPlayable(true)
-            .build(),
-    )
-    .build()
+fun externalMediaItem(uri: Uri, displayName: String?, tags: Tags?, artworkFile: File?): MediaItem =
+    MediaItem.Builder()
+        .setMediaId(uri.toString())
+        .setUri(uri)
+        .setRequestMetadata(MediaItem.RequestMetadata.Builder().setMediaUri(uri).build())
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(tags?.title ?: displayName?.substringBeforeLast('.'))
+                .setArtist(tags?.artist)
+                .setAlbumTitle(tags?.album)
+                .setAlbumArtist(tags?.albumArtist)
+                .setTrackNumber(tags?.trackNumber)
+                .setArtworkUri(artworkFile?.let(Uri::fromFile))
+                .setIsBrowsable(false)
+                .setIsPlayable(true)
+                .build(),
+        )
+        .build()

@@ -28,6 +28,25 @@ Design maison, sans Material : uniquement Compose Foundation, avec des composant
   ou depuis une autre app via « Ouvrir avec… → Lecteur ».
 - Un fichier illisible est **sauté** automatiquement, avec un message qui dit lequel.
 
+## Tags (titre, artiste, album, pochette)
+
+L'app part de l'index musical d'Android (MediaStore). Selon les téléphones, celui-ci ne lit correctement
+les tags que des MP3 : pour les autres formats il met le nom du fichier en titre, un artiste inconnu
+et le nom du dossier en album. L'app repère ces fichiers et relit elle-même leurs tags en arrière-plan
+(`data/TagReader.kt`), puis garde le résultat et les pochettes en cache (`data/TagStore.kt`) :
+chaque fichier n'est analysé qu'une fois, et de nouveau seulement s'il est modifié.
+
+| Format | Tags relus | Pochette |
+| --- | --- | --- |
+| MP3, AIFF | ID3 | oui |
+| FLAC, Ogg Vorbis, Opus | commentaires Vorbis | oui |
+| M4A (AAC, ALAC) | atomes iTunes | oui |
+| WAV | bloc ID3 ou liste INFO | avec ID3 |
+| MKA, WebM | non (les tags Matroska ne sont pas lus) | non |
+
+Les tests `TagReaderTest` et `MusicRepositoryTest` le vérifient sur de vrais fichiers
+(`app/src/test/resources/tags/`), avec un faux MediaStore qui se comporte comme celui de ces téléphones.
+
 ## Formats
 
 La lecture passe par Media3/ExoPlayer : les décodeurs du téléphone sont utilisés en priorité (économes
@@ -82,8 +101,10 @@ app/src/main/java/fr/douwdy/lecteur/
 ├── MainActivity.kt            permission, navigation, fichiers ouverts depuis d'autres apps
 ├── data/
 │   ├── Models.kt              Track, Album, Artist, Folder, Library
-│   ├── MusicRepository.kt     lecture de MediaStore et regroupements
-│   └── ArtworkLoader.kt       pochettes intégrées aux fichiers, avec cache
+│   ├── MusicRepository.kt     lecture de MediaStore, tags manquants relus, regroupements
+│   ├── TagReader.kt           lecture des tags dans les fichiers (Media3 + WAV/AIFF)
+│   ├── TagStore.kt            cache disque des tags et des pochettes relus
+│   └── ArtworkLoader.kt       pochettes à afficher, avec cache mémoire
 ├── playback/
 │   ├── PlaybackService.kt     ExoPlayer + FFmpeg dans un MediaSessionService
 │   ├── PlayerConnection.kt    MediaController exposé à l'interface en StateFlow

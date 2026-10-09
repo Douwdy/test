@@ -68,7 +68,7 @@ fun TrackRow(
             }
         } else {
             Box(Modifier.size(48.dp)) {
-                Artwork(track.uri, THUMB_PX, RoundedCornerShape(6.dp), Modifier.fillMaxSize())
+                Artwork(track.coverUri, THUMB_PX, RoundedCornerShape(6.dp), Modifier.fillMaxSize())
                 if (current) {
                     Box(
                         Modifier

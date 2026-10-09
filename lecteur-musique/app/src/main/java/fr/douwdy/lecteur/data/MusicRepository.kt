@@ -9,6 +9,13 @@ import android.os.Build
 import android.provider.MediaStore
 import fr.douwdy.lecteur.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -21,6 +28,10 @@ import java.text.Collator
  *
  * Tous les fichiers audio sont pris, quel que soit leur format : c'est le lecteur qui décide ensuite
  * s'il sait les décoder. Seuls les sons système (sonneries, notifications, alarmes) sont écartés.
+ *
+ * Selon les téléphones, l'index d'Android ne sait lire les tags que des MP3 : pour les autres formats
+ * il donne le nom du fichier comme titre, un artiste inconnu et le nom du dossier comme album.
+ * [enrich] relit alors les tags directement dans ces fichiers, et garde le résultat en cache.
  */
 class MusicRepository(private val context: Context) {
 
@@ -30,13 +41,77 @@ class MusicRepository(private val context: Context) {
 
     private val collator = Collator.getInstance().apply { strength = Collator.PRIMARY }
 
+    private val tagStore = TagStore(context)
+
+    /** Lectures de tags simultanées : assez pour avancer vite, sans saturer le stockage. */
+    private val readPermits = Semaphore(3)
+
+    /** Bibliothèque selon MediaStore, complétée par les tags déjà relus lors des lancements précédents. */
     suspend fun load(): Library = withContext(Dispatchers.IO) {
-        val tracks = queryTracks().sortedWith(compareBy(collator) { it.title })
-        Library(
-            tracks = tracks,
-            albums = groupAlbums(tracks),
-            artists = groupArtists(tracks),
-            folders = groupFolders(tracks),
+        buildLibrary(queryTracks().map { track -> tagStore.get(track.cacheKey)?.let { track.withTags(it) } ?: track })
+    }
+
+    /**
+     * Relit les tags des fichiers que MediaStore n'a pas su décrire, quelques-uns à la fois,
+     * et émet la bibliothèque mise à jour au fil de l'analyse. Ne fait rien si tout est déjà connu.
+     */
+    fun enrich(library: Library): Flow<Library> = flow {
+        val tracks = library.tracks.toMutableList()
+        val pending = tracks.indices.filter { tracks[it].looksUntagged() && tagStore.get(tracks[it].cacheKey) == null }
+        for (batch in pending.chunked(ENRICH_BATCH)) {
+            val read = coroutineScope {
+                batch.map { index ->
+                    async {
+                        readPermits.withPermit { index to TagReader.read(context, tracks[index].uri) }
+                    }
+                }.awaitAll()
+            }
+            var changed = false
+            for ((index, tags) in read) {
+                val cached = tagStore.put(tracks[index].cacheKey, tags)
+                if (tags != null) {
+                    tracks[index] = tracks[index].withTags(cached)
+                    changed = true
+                }
+            }
+            tagStore.save()
+            if (changed) emit(buildLibrary(tracks))
+        }
+        tagStore.retainOnly(tracks.mapTo(HashSet()) { it.cacheKey })
+    }.flowOn(Dispatchers.IO)
+
+    /** Tags d'un fichier hors bibliothèque (ouvert depuis une autre app), sans cache. */
+    suspend fun readTags(uri: Uri): Tags? = TagReader.read(context, uri)
+
+    /**
+     * Signes que MediaStore n'a pas lu les tags : artiste ou album inconnu, titre égal au nom du fichier,
+     * album égal au nom du dossier (sa valeur par défaut), ou durée inconnue.
+     */
+    private fun Track.looksUntagged(): Boolean =
+        artist == unknownArtist ||
+            album == unknownAlbum ||
+            title == fileName.substringBeforeLast('.') ||
+            album == folderPath.substringAfterLast('/') ||
+            durationMs <= 0
+
+    private fun Track.withTags(tags: CachedTags): Track = copy(
+        title = tags.title ?: title,
+        artist = tags.artist ?: artist,
+        album = tags.album ?: album,
+        albumArtist = tags.albumArtist ?: albumArtist,
+        trackNumber = tags.trackNumber ?: trackNumber,
+        discNumber = tags.discNumber ?: discNumber,
+        durationMs = durationMs.takeIf { it > 0 } ?: tags.durationMs ?: 0,
+        artworkFile = tags.artworkFile ?: artworkFile,
+    )
+
+    private fun buildLibrary(tracks: List<Track>): Library {
+        val sorted = tracks.sortedWith(compareBy(collator) { it.title })
+        return Library(
+            tracks = sorted,
+            albums = groupAlbums(sorted),
+            artists = groupArtists(sorted),
+            folders = groupFolders(sorted),
         )
     }
 
@@ -70,6 +145,8 @@ class MusicRepository(private val context: Context) {
             add(MediaStore.Audio.Media.DURATION)
             add(MediaStore.Audio.Media.TRACK)
             add(MediaStore.Audio.Media.DISPLAY_NAME)
+            add(MediaStore.Audio.Media.DATE_MODIFIED)
+            add(MediaStore.Audio.Media.SIZE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 add(MediaStore.Audio.Media.RELATIVE_PATH)
             } else {
@@ -100,6 +177,8 @@ class MusicRepository(private val context: Context) {
         val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
         val trackCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
         val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+        val modifiedCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
+        val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
         val pathCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.RELATIVE_PATH)
         } else {
@@ -131,6 +210,8 @@ class MusicRepository(private val context: Context) {
                 discNumber = rawTrack / 1000,
                 folderPath = folderOf(cursor.getString(pathCol).orEmpty()),
                 fileName = fileName,
+                dateModified = cursor.getLong(modifiedCol),
+                size = cursor.getLong(sizeCol),
             )
         }
         return tracks
@@ -146,8 +227,15 @@ class MusicRepository(private val context: Context) {
         return path.ifEmpty { "/" }
     }
 
+    /**
+     * Un album = un titre d'album et son artiste d'album ; sans artiste d'album, un titre dans un dossier
+     * (les compilations sans tag d'artiste d'album restent ainsi groupées).
+     */
+    private fun albumKey(track: Track): String =
+        track.album.lowercase() + "|" + (track.albumArtist?.lowercase() ?: track.folderPath)
+
     private fun groupAlbums(tracks: List<Track>): List<Album> =
-        tracks.groupBy { it.albumId }
+        tracks.groupBy(::albumKey)
             .map { (id, albumTracks) ->
                 val sorted = albumTracks.sortedWith(
                     compareBy<Track> { it.discNumber }
@@ -174,7 +262,7 @@ class MusicRepository(private val context: Context) {
             .map { (name, artistTracks) ->
                 Artist(
                     name = name,
-                    albumCount = artistTracks.distinctBy { it.albumId }.size,
+                    albumCount = artistTracks.distinctBy(::albumKey).size,
                     tracks = artistTracks.sortedWith(
                         compareBy<Track, String>(collator) { it.album }
                             .thenBy { it.discNumber }
@@ -198,4 +286,9 @@ class MusicRepository(private val context: Context) {
     /** MediaStore renvoie parfois « <unknown> » au lieu d'une valeur vide. */
     private fun String?.cleanTag(): String? =
         this?.trim()?.takeUnless { it.isEmpty() || it == MediaStore.UNKNOWN_STRING }
+
+    private companion object {
+        /** Fichiers analysés entre deux mises à jour de l'écran. */
+        const val ENRICH_BATCH = 24
+    }
 }

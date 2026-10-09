@@ -3,8 +3,12 @@ package fr.douwdy.lecteur.data
 import android.content.ContentUris
 import android.net.Uri
 import androidx.core.net.toUri
+import java.io.File
 
-/** Un morceau de la bibliothèque, tel qu'indexé par Android (MediaStore). */
+/**
+ * Un morceau de la bibliothèque : ce qu'en dit l'index d'Android (MediaStore), complété au besoin
+ * par les tags relus dans le fichier (voir [TagReader]).
+ */
 data class Track(
     val id: Long,
     val uri: Uri,
@@ -20,13 +24,24 @@ data class Track(
     val discNumber: Int,
     val folderPath: String,
     val fileName: String,
+    /** Date de modification (secondes) et taille du fichier : identifient sa version pour le cache des tags. */
+    val dateModified: Long = 0,
+    val size: Long = 0,
+    /** Pochette extraite du fichier par l'app, quand Android ne la connaît pas. */
+    val artworkFile: File? = null,
 ) {
     /** Clé utilisée comme identifiant de média dans le lecteur. */
     val mediaId: String get() = uri.toString()
 
-    /** Pochette d'album exposée par MediaStore (utilisée par la notification). */
-    val albumArtUri: Uri
-        get() = ContentUris.withAppendedId(ALBUM_ART_BASE, albumId)
+    /** Clé du cache des tags : change dès que le fichier est modifié. */
+    val cacheKey: String get() = "$id-$dateModified-$size"
+
+    /** Ce qu'il faut charger pour afficher la pochette : l'image extraite, sinon le fichier audio. */
+    val coverUri: Uri get() = artworkFile?.let(Uri::fromFile) ?: uri
+
+    /** Pochette pour la notification : l'image extraite, sinon celle de l'album selon MediaStore. */
+    val artworkUri: Uri
+        get() = artworkFile?.let(Uri::fromFile) ?: ContentUris.withAppendedId(ALBUM_ART_BASE, albumId)
 
     private companion object {
         val ALBUM_ART_BASE: Uri = "content://media/external/audio/albumart".toUri()
@@ -34,7 +49,8 @@ data class Track(
 }
 
 data class Album(
-    val id: Long,
+    /** Titre et artiste de l'album (ou dossier), normalisés : regroupe les pistes d'un même disque. */
+    val id: String,
     val title: String,
     val artist: String,
     val tracks: List<Track>,

@@ -87,7 +87,7 @@ fun LibraryScreen(
     currentMediaId: String?,
     isPlaying: Boolean,
     bottomPadding: Dp,
-    onOpenAlbum: (Long) -> Unit,
+    onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
     onOpenFolder: (String) -> Unit,
     onOpenFiles: () -> Unit,
@@ -208,7 +208,7 @@ private fun LibraryTabs(
     currentMediaId: String?,
     isPlaying: Boolean,
     viewModel: MusicViewModel,
-    onOpenAlbum: (Long) -> Unit,
+    onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
     onOpenFolder: (String) -> Unit,
 ) {
@@ -257,7 +257,7 @@ private fun LibraryTabs(
                             pluralStringResource(R.plurals.albums_count, artist.albumCount, artist.albumCount),
                             pluralStringResource(R.plurals.tracks_count, artist.tracks.size, artist.tracks.size),
                         ),
-                        artworkUri = artist.tracks.first().uri,
+                        artworkUri = artist.tracks.first().coverUri,
                         onClick = { onOpenArtist(artist.name) },
                     )
                 }
@@ -328,7 +328,7 @@ private fun TabStrip(labels: List<String>, counts: List<Int>, selected: Int, onS
 private fun AlbumsGrid(
     albums: List<Album>,
     padding: PaddingValues,
-    onOpenAlbum: (Long) -> Unit,
+    onOpenAlbum: (String) -> Unit,
     noResults: @Composable () -> Unit,
 ) {
     if (albums.isEmpty()) {
@@ -353,7 +353,7 @@ private fun AlbumsGrid(
                     .padding(6.dp),
             ) {
                 Artwork(
-                    uri = album.tracks.first().uri,
+                    uri = album.tracks.first().coverUri,
                     sizePx = coverPx,
                     shape = RoundedCornerShape(4.dp),
                     modifier = Modifier

@@ -28,6 +28,8 @@ data class PlayerUiState(
     val hasMedia: Boolean = false,
     val mediaId: String? = null,
     val mediaUri: Uri? = null,
+    /** Pochette à afficher : l'image extraite par l'app si elle existe, sinon le fichier audio lui-même. */
+    val artworkUri: Uri? = null,
     val title: String = "",
     val artist: String? = null,
     val album: String? = null,
@@ -169,6 +171,7 @@ class PlayerConnection(context: Context, scope: CoroutineScope) {
             hasMedia = item != null,
             mediaId = item?.mediaId,
             mediaUri = item?.let(::uriOf),
+            artworkUri = metadata.artworkUri?.takeIf { it.scheme == "file" } ?: item?.let(::uriOf),
             title = metadata.title?.toString()
                 ?: metadata.displayTitle?.toString()
                 ?: item?.mediaId?.let { it.toUri().lastPathSegment }

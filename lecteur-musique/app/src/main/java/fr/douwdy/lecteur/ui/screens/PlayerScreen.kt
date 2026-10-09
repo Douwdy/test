@@ -78,7 +78,7 @@ fun PlayerScreen(
     val coverPx = LocalWindowInfo.current.containerSize.width
 
     // Le haut de l'écran prend la couleur dominante de la pochette.
-    val artwork = rememberArtwork(state.mediaUri, coverPx)
+    val artwork = rememberArtwork(state.artworkUri, coverPx)
     val dominant = remember(artwork) { artwork?.averageColor() }
     val glow by animateColorAsState(
         targetValue = dominant?.let { lerp(it, colors.background, 0.35f) } ?: colors.surfaceHigh,
@@ -127,7 +127,7 @@ fun PlayerScreen(
             } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Artwork(
-                        uri = state.mediaUri,
+                        uri = state.artworkUri,
                         sizePx = coverPx,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier

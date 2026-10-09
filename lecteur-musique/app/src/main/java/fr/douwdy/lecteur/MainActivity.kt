@@ -50,12 +50,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import fr.douwdy.lecteur.ui.LibraryState
 import fr.douwdy.lecteur.ui.MusicViewModel
 import fr.douwdy.lecteur.ui.components.Message
@@ -110,7 +108,7 @@ private object Routes {
     const val ARTIST = "artist/{name}"
     const val FOLDER = "folder/{path}"
 
-    fun album(id: Long) = "album/$id"
+    fun album(id: String) = "album/${Uri.encode(id)}"
     fun artist(name: String) = "artist/${Uri.encode(name)}"
     fun folder(path: String) = "folder/${Uri.encode(path)}"
 }
@@ -282,8 +280,9 @@ private fun AppNavHost(
                 onOpenFiles = openFiles,
             )
         }
-        composable(Routes.ALBUM, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
-            val album = loaded?.albums?.find { it.id == entry.arguments?.getLong("id") }
+        composable(Routes.ALBUM) { entry ->
+            val id = entry.arguments?.getString("id")?.let(Uri::decode)
+            val album = loaded?.albums?.find { it.id == id }
             if (album == null) {
                 LaunchedEffect(Unit) { navController.popBackStack() }
                 return@composable
@@ -293,7 +292,7 @@ private fun AppNavHost(
                 title = album.title,
                 subtitle = album.artist,
                 tracks = album.tracks,
-                coverUri = album.tracks.first().uri,
+                coverUri = album.tracks.first().coverUri,
                 isAlbum = true,
                 currentMediaId = currentMediaId,
                 isPlaying = isPlaying,

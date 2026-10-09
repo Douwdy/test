@@ -82,7 +82,7 @@ class ScreenshotTest {
 
     private val library = Library(
         tracks = tracks,
-        albums = tracks.groupBy { it.album }.map { (title, t) -> Album(t.first().albumId, title, t.first().artist, t) },
+        albums = tracks.groupBy { it.album }.map { (title, t) -> Album(title, title, t.first().artist, t) },
         artists = tracks.groupBy { it.artist }.map { (name, t) -> Artist(name, 1, t) },
         folders = listOf(Folder("Music/Rivages", "Rivages", tracks.take(3))),
     )
@@ -150,7 +150,7 @@ class ScreenshotTest {
                     onPlay = {},
                     onShuffle = {},
                     onBack = {},
-                    coverUri = album.tracks.first().uri,
+                    coverUri = album.tracks.first().coverUri,
                     isAlbum = true,
                 )
             }
