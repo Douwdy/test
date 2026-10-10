@@ -89,6 +89,7 @@ afficher la progression : il n'a pas de console.
 - `moteur.py` fait le reste du travail. ffprobe lit les tags et ffmpeg extrait la pochette. ffmpeg décode
   l'audio en mono 22 kHz pour l'analyse, que fait numpy : spectre en bandes logarithmiques (35 Hz à
   11 kHz), énergie des basses, et détection des attaques (flux spectral des graves avec un seuil
-  adaptatif). Pillow dessine le premier plan sur le fond, avec plusieurs processus en parallèle. Elles passent par un tube vers
-  ffmpeg, qui les encode en H.264 avec la piste audio d'origine en AAC 320 kb/s.
+  adaptatif). Pillow dessine le premier plan sur le fond, avec plusieurs processus en parallèle.
+  Les images passent par un tube vers ffmpeg, qui les encode en H.264 avec la piste audio d'origine en
+  AAC 320 kb/s.
 - `visualiseur.py` contient l'interface (tkinter) et la ligne de commande.
