@@ -1,8 +1,9 @@
 # Visualiseur musical
 
 Transforme un morceau (MP3, FLAC, WAV, OGG, Opus, M4A, WMA… tout ce que lit ffmpeg) en vidéo MP4
-animée au rythme de la musique, sans paroles : la pochette bat sur les kicks, le spectre suit les
-fréquences, des particules accélèrent sur les temps forts.
+animée au rythme de la musique, sans paroles. Le fond est généré par un shader GLSL qui réagit au
+morceau. La pochette bat sur les kicks, le spectre suit les fréquences et des particules accélèrent
+sur les temps forts.
 
 Titre, artiste, album et pochette sont lus dans le fichier. S'il n'y a pas de tag, le titre vient du nom
 du fichier (`Artiste - Titre.mp3` est découpé). S'il n'y a pas de pochette intégrée, une image
@@ -19,12 +20,34 @@ Sans aucune pochette, une image est générée avec l'initiale du titre.
 | Réglage | Choix |
 | --- | --- |
 | Format | 1080p, 720p, 1440p, 4K (16:9), carré 1080×1080, vertical 1080×1920 (Shorts, TikTok) |
+| Fond | Shader : **Nébuleuse**, **Plasma**, **Tunnel**, **Aurore boréale**, **Kaléidoscope**, **Synthwave**. Sans shader : **Pochette floutée** |
 | Style | **Barres** : spectre symétrique en bas · **Cercle** : spectre en couronne autour de la pochette ronde · **Onde** : oscilloscope |
 | Images/s | 24, 30 ou 60 |
 | Extrait | début et durée en secondes, pour une vidéo courte ou un test rapide (vide = morceau entier) |
 
 Le rendu utilise tous les cœurs du processeur. Avec un processeur de 4 cœurs, 1 minute de vidéo 1080p à
 30 i/s prend environ 2 minutes. En 4K, comptez 4 à 5 fois plus.
+
+## Les fonds générés
+
+Chaque fond est un fragment shader (`shaders.py`) calculé par la carte graphique à chaque image.
+Il reçoit l'analyse du morceau :
+
+- le « temps musical », qui fait avancer l'animation plus vite quand la musique est forte et ralentit
+  dans les passages calmes ;
+- les basses, les kicks, le volume et un spectre en 16 bandes ;
+- trois couleurs tirées de la pochette : la dominante et deux autres teintes.
+
+Par exemple, le tunnel avance au rythme et ses anneaux s'allument sur les kicks. La nébuleuse se tord
+davantage sur les basses, et les rideaux de l'aurore suivent le spectre.
+
+Il faut une carte graphique qui gère **OpenGL 3.3**, ce qui est le cas de tout PC depuis 2010 environ.
+Dans une machine virtuelle ou en bureau à distance, OpenGL est souvent absent : le programme le signale,
+et le fond « Pochette floutée » fonctionne sans lui.
+
+Pour ajouter un fond, ajoutez une fonction GLSL `vec3 fond(vec2 p)` dans `SOURCES` et son nom dans `FONDS`.
+`p` est centré, avec y vers le haut et une hauteur d'écran de 1. Les outils `fbm`, `noise`, `pal` et
+`bande` sont fournis.
 
 ## Installation
 
@@ -62,9 +85,10 @@ afficher la progression : il n'a pas de console.
 
 ## Fonctionnement
 
-- `moteur.py` fait tout le travail. ffprobe lit les tags et ffmpeg extrait la pochette. ffmpeg décode
+- `shaders.py` contient les fonds GLSL, rendus hors écran avec moderngl puis relus pour Pillow.
+- `moteur.py` fait le reste du travail. ffprobe lit les tags et ffmpeg extrait la pochette. ffmpeg décode
   l'audio en mono 22 kHz pour l'analyse, que fait numpy : spectre en bandes logarithmiques (35 Hz à
   11 kHz), énergie des basses, et détection des attaques (flux spectral des graves avec un seuil
-  adaptatif). Pillow dessine les images, plusieurs processus en parallèle. Elles passent par un tube vers
+  adaptatif). Pillow dessine le premier plan sur le fond, avec plusieurs processus en parallèle. Elles passent par un tube vers
   ffmpeg, qui les encode en H.264 avec la piste audio d'origine en AAC 320 kb/s.
 - `visualiseur.py` contient l'interface (tkinter) et la ligne de commande.

@@ -20,6 +20,8 @@ from dataclasses import dataclass
 import numpy as np
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 
+from shaders import FONDS, FondShader
+
 SR = 22050  # fréquence d'échantillonnage utilisée pour l'analyse (pas pour la vidéo finale)
 STYLES = ("barres", "cercle", "onde")
 QUALITES = {"rapide": ("veryfast", 20), "normale": ("medium", 18), "haute": ("slow", 16)}
@@ -307,6 +309,34 @@ def couleur_accent(img):
     return tuple(int(v) for v in np.clip(c * 255, 0, 255))
 
 
+def palette(img, accent):
+    """Trois couleurs vives pour les shaders : la dominante et deux autres teintes de la pochette."""
+    import colorsys
+    h0, _, _ = colorsys.rgb_to_hsv(*(v / 255 for v in accent))
+    teintes = []
+    if img is not None:
+        a = np.asarray(img.convert("RGB").resize((64, 64)), np.float32).reshape(-1, 3) / 255
+        mx, mn = a.max(axis=1), a.min(axis=1)
+        score = ((mx - mn) / (mx + 1e-6)) ** 2 * mx * (mx > 0.2)
+        r, g, b = a[:, 0], a[:, 1], a[:, 2]
+        bins = (np.degrees(np.arctan2(math.sqrt(3) * (g - b), 2 * r - g - b)) % 360).astype(int) // 15
+        poids = np.bincount(bins, weights=score, minlength=24)
+        for k in np.argsort(poids)[::-1]:
+            if poids[k] < max(1.0, poids.max() * 0.08):
+                break
+            h = (k + 0.5) / 24
+            if all(min(abs(h - t), 1 - abs(h - t)) > 0.07 for t in [h0] + teintes):
+                teintes.append(h)
+            if len(teintes) == 2:
+                break
+    while len(teintes) < 2:  # pochette monochrome ou absente : teintes voisines de la dominante
+        teintes.append((h0 + (0.12 if not teintes else -0.14)) % 1)
+    couleurs = [tuple(accent)]
+    for h, v in zip(teintes, (0.95, 0.75)):
+        couleurs.append(tuple(int(c * 255) for c in colorsys.hsv_to_rgb(h, 0.75, v)))
+    return couleurs
+
+
 def _melange(c1, c2, t):
     return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2))
 
@@ -352,6 +382,7 @@ class Options:
     hauteur: int = 1080
     fps: int = 30
     style: str = "barres"
+    fond: str = "nebuleuse"  # un shader de shaders.FONDS, ou "pochette"
     titre: str = ""
     artiste: str = ""
     album: str = ""
@@ -366,6 +397,8 @@ class Options:
         self.hauteur -= self.hauteur % 2
         if self.style not in STYLES:
             raise ValueError(f"Style inconnu : {self.style} (choix : {', '.join(STYLES)})")
+        if self.fond not in FONDS:
+            raise ValueError(f"Fond inconnu : {self.fond} (choix : {', '.join(FONDS)})")
 
     @property
     def nb_bandes(self):
@@ -483,6 +516,18 @@ class Rendu:
 
         self.bloc_texte = self._bloc_texte()
 
+        # --- fond animé par shader : il avance au « temps musical » (plus vite quand ça cogne)
+        self.shader = None
+        if opts.fond != "pochette":
+            self.shader = FondShader(opts.fond, W, H, palette(opts.pochette, self.accent))
+            self.phase = np.cumsum(0.35 + 0.9 * analyse.energie + 0.8 * analyse.pulse) / analyse.fps
+            nb = analyse.bandes.shape[1]
+            # spectre ramené à 16 bandes (interpolation linéaire entre bandes voisines)
+            x = np.linspace(0, nb - 1, 16)
+            k0 = np.floor(x).astype(int)
+            k1 = np.minimum(k0 + 1, nb - 1)
+            self.bandes16 = analyse.bandes[:, k0] * (1 - (x - k0)) + analyse.bandes[:, k1] * (x - k0)
+
         # --- particules : trajectoires déterministes (chaque image se calcule seule, en parallèle)
         rng = np.random.default_rng(7)
         np_ = int(110 * (W * H) / (1920 * 1080) ** 1) if opts.particules else 0
@@ -530,14 +575,25 @@ class Rendu:
         fond = Image.merge("RGBA", (*[Image.new("L", img.size, 0)] * 3, ombre))
         return Image.alpha_composite(fond, img), marge
 
-    def _fond(self, pulse):
+    def _fond(self, i, pulse):
+        """Image de fond, plus un tableau (H, W, 3) et un facteur pour lire sa couleur sous les particules."""
+        a = self.a
+        if self.shader is not None:
+            octets = self.shader.rendre(i / a.fps, float(self.phase[i]), float(a.basse[i]), pulse,
+                                        float(a.impulsion[i]), float(a.energie[i]), self.bandes16[i])
+            img = Image.frombytes("RGB", (self.W, self.H), octets)
+            return img, np.frombuffer(octets, np.uint8).reshape(self.H, self.W, 3), 1.0
         niveau = int(round(pulse * 12))
+        f = 0.85 + 0.35 * niveau / 12
         img = self._cache_fond.get(niveau)
         if img is None:
-            f = 0.85 + 0.35 * niveau / 12
-            img = Image.fromarray(np.clip(self.fond * f, 0, 255).astype(np.uint8))
-            self._cache_fond[niveau] = img
-        return img.copy()
+            img = self._cache_fond[niveau] = Image.fromarray(np.clip(self.fond * f, 0, 255).astype(np.uint8))
+        return img.copy(), self.fond, f
+
+    def fermer(self):
+        if self.shader is not None:
+            self.shader.fermer()
+            self.shader = None
 
     def _pochette(self, pulse):
         taille = int(self.S * (1 + 0.07 * pulse)) // 2 * 2
@@ -602,7 +658,7 @@ class Rendu:
                    joint="curve")
         d_net.line(pts, fill=self.clair, width=ep, joint="curve")
 
-    def _particules(self, d_net, i, pulse):
+    def _particules(self, d_net, i, pulse, fond, facteur):
         """Points lumineux qui s'échappent de la pochette et accélèrent sur les temps forts."""
         if not len(self.p_angle):
             return
@@ -619,8 +675,7 @@ class Rendu:
         vis = (lum > 0.03) & (x > -10) & (x < self.W + 10) & (y > -10) & (y < self.H + 10)
         x, y, lum, r = x[vis], y[vis], lum[vis], r[vis]
         # mélange additif avec le fond, sans calque alpha : on lit la couleur du fond sous chaque point
-        fond = self.fond[np.clip(y.astype(int), 0, self.H - 1), np.clip(x.astype(int), 0, self.W - 1)]
-        fond = fond * (0.85 + 0.35 * pulse)
+        fond = fond[np.clip(y.astype(int), 0, self.H - 1), np.clip(x.astype(int), 0, self.W - 1)] * facteur
         clair = np.array(self.clair, np.float32)
         aura = np.clip(fond + clair * lum[:, None] * 0.3, 0, 255).astype(int)
         coeur = np.clip(fond + clair * lum[:, None], 0, 255).astype(int)
@@ -632,14 +687,14 @@ class Rendu:
         o, a = self.o, self.a
         i = min(i, a.n - 1)
         pulse = float(a.pulse[i])
-        img = self._fond(pulse)
+        img, fond, facteur = self._fond(i, pulse)
         W, H, g = self.W, self.H, self.g
         zx0, zy0, zx1, zy1 = self.zone
 
         halo = Image.new("RGB", ((zx1 - zx0) // g, (zy1 - zy0) // g))
         d_halo = ImageDraw.Draw(halo)
         d_net = ImageDraw.Draw(img)
-        self._particules(d_net, i, pulse)
+        self._particules(d_net, i, pulse, fond, facteur)
         if o.style == "barres":
             self._barres(d_net, d_halo, i)
         elif o.style == "onde":
@@ -689,6 +744,38 @@ def _image_proc(i):
     return _rendu_proc.image(i).tobytes()
 
 
+def _apercu_proc(opts, analyse, i):
+    rendu = Rendu(opts, analyse)
+    try:
+        return rendu.image(i)
+    finally:
+        rendu.fermer()
+
+
+def _verifier_proc(fond):
+    FondShader(fond, 64, 64, [COULEUR_DEFAUT] * 3).fermer()
+
+
+def _dans_un_processus(fonction, *args):
+    """OpenGL ne doit pas partager le processus de l'interface (Xlib/WGL et threads ne font pas bon ménage)."""
+    with multiprocessing.get_context("spawn").Pool(1) as pool:
+        return pool.apply(fonction, args)
+
+
+def verifier_opengl(fond, isoler=True):
+    """Lève RuntimeError avec un message clair si le fond demandé ne peut pas être rendu."""
+    if fond != "pochette":
+        if isoler:
+            _dans_un_processus(_verifier_proc, fond)
+        else:
+            _verifier_proc(fond)
+
+
+def apercu(opts, analyse, i):
+    """Une image de la vidéo, rendue dans un processus séparé."""
+    return _dans_un_processus(_apercu_proc, opts, analyse, i)
+
+
 def preparer(chemin, opts: Options, debut=0.0, duree=None):
     return analyser(decoder_audio(chemin, debut, duree), opts.fps, opts.nb_bandes)
 
@@ -705,6 +792,11 @@ def generer(chemin, sortie, opts: Options, debut=0.0, duree=None, progression=No
             raise Annule()
 
     ffmpeg = _outil("ffmpeg")
+    if processus is None:
+        processus = max(1, min(8, (os.cpu_count() or 2) - 1))
+    # vérifie OpenGL tout de suite, avant de décoder et d'analyser (et avant de lancer les processus de
+    # rendu : une erreur dans leur initialisation les ferait redémarrer en boucle)
+    verifier_opengl(opts.fond, isoler=processus > 1)
     if analyse is None:
         signaler(0, "Lecture de l'audio…")
         echantillons = decoder_audio(chemin, debut, duree)
@@ -732,12 +824,10 @@ def generer(chemin, sortie, opts: Options, debut=0.0, duree=None, progression=No
     args.append(sortie)
 
     n = analyse.n
-    if processus is None:
-        processus = max(1, min(8, (os.cpu_count() or 2) - 1))
     journal = tempfile.TemporaryFile()
     proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=journal,
                             creationflags=NO_WINDOW)
-    pool = None
+    pool = rendu = None
     termine = False
     try:
         if processus > 1:
@@ -775,6 +865,8 @@ def generer(chemin, sortie, opts: Options, debut=0.0, duree=None, progression=No
         if pool is not None:
             pool.terminate()
             pool.join()
+        if rendu is not None:
+            rendu.fermer()
         if proc.poll() is None:
             proc.kill()
             proc.wait()

@@ -13,6 +13,7 @@ import sys
 import threading
 
 import moteur
+from shaders import FONDS as NOMS_FONDS
 
 FORMATS = {
     "1920×1080 — 16:9 (YouTube)": (1920, 1080),
@@ -23,6 +24,7 @@ FORMATS = {
     "1080×1920 — vertical (Shorts, TikTok)": (1080, 1920),
 }
 STYLES = {"Barres": "barres", "Cercle": "cercle", "Onde": "onde"}
+FONDS = {libelle: cle for cle, libelle in NOMS_FONDS.items()}
 QUALITES = {"Rapide": "rapide", "Normale": "normale", "Haute (plus lent)": "haute"}
 TYPES_AUDIO = [("Fichiers audio", "*.mp3 *.flac *.wav *.ogg *.opus *.m4a *.aac *.wma *.aiff *.aif *.alac *.ape "
                                   "*.wv *.mka *.mp4 *.webm *.mkv"), ("Tous les fichiers", "*.*")]
@@ -74,6 +76,7 @@ def lancer_interface(fichier=None):
             self.v = {k: tk.StringVar() for k in ("fichier", "titre", "artiste", "album", "sortie", "debut", "duree")}
             self.v_format = tk.StringVar(value=next(iter(FORMATS)))
             self.v_style = tk.StringVar(value="Barres")
+            self.v_fond = tk.StringVar(value=NOMS_FONDS["nebuleuse"])
             self.v_fps = tk.StringVar(value="30")
             self.v_qualite = tk.StringVar(value="Normale")
             self.v_particules = tk.BooleanVar(value=True)
@@ -140,9 +143,13 @@ def lancer_interface(fichier=None):
             ttk.Combobox(f, textvariable=self.v_qualite, values=list(QUALITES), state="readonly", width=16) \
                 .grid(row=1, column=3, sticky="ew", padx=6, pady=2)
 
-            ttk.Label(f, text="Couleur").grid(row=2, column=0, sticky="w")
+            ttk.Label(f, text="Fond (shader)").grid(row=2, column=0, sticky="w")
+            ttk.Combobox(f, textvariable=self.v_fond, values=list(FONDS), state="readonly", width=30) \
+                .grid(row=2, column=1, sticky="ew", padx=6, pady=2)
+
+            ttk.Label(f, text="Couleur").grid(row=3, column=0, sticky="w")
             cc = ttk.Frame(f)
-            cc.grid(row=2, column=1, sticky="w", padx=6, pady=2)
+            cc.grid(row=3, column=1, sticky="w", padx=6, pady=2)
             self.lbl_couleur = tk.Label(cc, width=3, relief="groove")
             self.lbl_couleur.pack(side="left")
             self.lbl_couleur_txt = ttk.Label(cc, text="")
@@ -150,13 +157,13 @@ def lancer_interface(fichier=None):
             ttk.Button(cc, text="Choisir…", command=self._choisir_couleur).pack(side="left")
             ttk.Button(cc, text="Auto", command=lambda: self._definir_couleur(None)).pack(side="left", padx=4)
             oc = ttk.Frame(f)
-            oc.grid(row=2, column=2, columnspan=2, sticky="w")
+            oc.grid(row=3, column=2, columnspan=2, sticky="w")
             ttk.Checkbutton(oc, text="Particules", variable=self.v_particules).pack(side="left")
             ttk.Checkbutton(oc, text="Barre de progression", variable=self.v_progression).pack(side="left", padx=8)
 
-            ttk.Label(f, text="Extrait").grid(row=3, column=0, sticky="w")
+            ttk.Label(f, text="Extrait").grid(row=4, column=0, sticky="w")
             ex = ttk.Frame(f)
-            ex.grid(row=3, column=1, columnspan=3, sticky="w", padx=6, pady=2)
+            ex.grid(row=4, column=1, columnspan=3, sticky="w", padx=6, pady=2)
             ttk.Label(ex, text="début (s)").pack(side="left")
             ttk.Entry(ex, textvariable=self.v["debut"], width=7).pack(side="left", padx=4)
             ttk.Label(ex, text="durée (s)").pack(side="left", padx=(8, 0))
@@ -256,6 +263,7 @@ def lancer_interface(fichier=None):
             w, h = FORMATS[self.v_format.get()]
             return moteur.Options(
                 largeur=w, hauteur=h, fps=int(self.v_fps.get()), style=STYLES[self.v_style.get()],
+                fond=FONDS[self.v_fond.get()],
                 titre=self.v["titre"].get(), artiste=self.v["artiste"].get(), album=self.v["album"].get(),
                 pochette=self.pochette, couleur=self.couleur, particules=self.v_particules.get(),
                 progression=self.v_progression.get(), qualite=QUALITES[self.v_qualite.get()])
@@ -336,7 +344,7 @@ def lancer_interface(fichier=None):
                 n = analyse.n
                 zone = analyse.pulse[n // 4: max(n // 4 + 1, n // 2)]
                 i = n // 4 + int(zone.argmax())
-                return moteur.Rendu(opts, analyse).image(i), i / analyse.fps
+                return moteur.apercu(opts, analyse, i), i / analyse.fps
 
             def fini(res):
                 img, t = res
@@ -405,6 +413,8 @@ def ligne_de_commande(argv):
     p.add_argument("audio", help="fichier audio (tout format lu par ffmpeg)")
     p.add_argument("-o", "--sortie", help="vidéo MP4 à créer (par défaut : à côté du fichier audio)")
     p.add_argument("--style", choices=moteur.STYLES, default="barres")
+    p.add_argument("--fond", choices=list(NOMS_FONDS), default="nebuleuse",
+                   help="fond généré par shader, ou « pochette » (pochette floutée, sans OpenGL)")
     p.add_argument("--format", default="1920x1080", help="largeur x hauteur, ex. 1920x1080, 1080x1920")
     p.add_argument("--fps", type=int, default=30)
     p.add_argument("--qualite", choices=list(moteur.QUALITES), default="normale")
@@ -433,7 +443,7 @@ def ligne_de_commande(argv):
         couleur = tuple(int(c[k:k + 2], 16) for k in (0, 2, 4))
     album = a.album if a.album is not None else infos.album
     opts = moteur.Options(
-        largeur=w, hauteur=h, fps=a.fps, style=a.style,
+        largeur=w, hauteur=h, fps=a.fps, style=a.style, fond=a.fond,
         titre=a.titre if a.titre is not None else infos.titre,
         artiste=a.artiste if a.artiste is not None else infos.artiste,
         album=album, pochette=moteur.ouvrir_image(a.pochette) if a.pochette else infos.pochette,

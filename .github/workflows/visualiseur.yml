@@ -28,14 +28,36 @@ jobs:
           Invoke-WebRequest https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip -OutFile ffmpeg.zip
           Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-zip
           Get-ChildItem ffmpeg-zip -Recurse -Include ffmpeg.exe,ffprobe.exe | Copy-Item -Destination .
-      - name: Test (rendu d'un extrait de 2 s)
+      # Les machines GitHub n'ont pas de carte graphique : pour tester les shaders, on utilise le rendu
+      # OpenGL logiciel de Mesa (llvmpipe). Ces DLL servent aux tests seulement, elles ne sont pas livrées.
+      - name: OpenGL logiciel (tests)
+        shell: pwsh
+        run: |
+          $rel = Invoke-RestMethod https://api.github.com/repos/pal1000/mesa-dist-win/releases/latest -Headers @{ Authorization = "Bearer ${{ github.token }}" }
+          $asset = $rel.assets | Where-Object { $_.name -like "*release-msvc.7z" } | Select-Object -First 1
+          Invoke-WebRequest $asset.browser_download_url -OutFile mesa.7z
+          7z x mesa.7z -omesa | Out-Null
+          New-Item -ItemType Directory -Force mesa-dll | Out-Null
+          Copy-Item mesa/x64/*.dll mesa-dll/
+          Copy-Item mesa-dll/*.dll (Split-Path (Get-Command python).Source)
+      - name: Test du script (shader + rendu parallèle)
         shell: pwsh
         run: |
           .\ffmpeg.exe -v error -f lavfi -i "sine=f=60:d=4" -metadata title=Test essai.mp3
-          python visualiseur.py essai.mp3 -o essai.mp4 --duree 2 --format 640x360 --qualite rapide
+          python visualiseur.py essai.mp3 -o essai.mp4 --duree 2 --format 640x360 --qualite rapide --fond nebuleuse
           if (-not (Test-Path essai.mp4)) { exit 1 }
+          python visualiseur.py essai.mp3 -o essai2.mp4 --duree 2 --format 640x360 --qualite rapide --fond pochette --style cercle
+          if (-not (Test-Path essai2.mp4)) { exit 1 }
       - name: Exécutable
-        run: python -m PyInstaller --noconfirm --onefile --windowed --name Visualiseur visualiseur.py
+        run: python -m PyInstaller --noconfirm --onefile --windowed --collect-submodules glcontext --name Visualiseur visualiseur.py
+      - name: Test de l'exécutable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force essai-exe | Out-Null
+          Copy-Item dist/Visualiseur.exe, ffmpeg.exe, ffprobe.exe, essai.mp3, mesa-dll/*.dll essai-exe/
+          $p = Start-Process -Wait -PassThru -FilePath essai-exe/Visualiseur.exe -ArgumentList "essai.mp3","-o","exe.mp4","--duree","2","--format","640x360","--qualite","rapide","--fond","synthwave" -WorkingDirectory essai-exe
+          if ($p.ExitCode -ne 0 -or -not (Test-Path essai-exe/exe.mp4)) { Write-Error "l'exe n'a pas produit la vidéo (code $($p.ExitCode))"; exit 1 }
+          .\ffprobe.exe -v error -show_entries format=duration -of compact essai-exe/exe.mp4
       - name: Paquet
         shell: pwsh
         run: |
